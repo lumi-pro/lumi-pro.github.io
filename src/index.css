@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Outfit", sans-serif;
+  --font-serif: "Playfair Display", serif;
+  
+  --color-lumi-cream: #FFFDF0;
+  --color-lumi-pink: #FFE2EC;
+  --color-lumi-blue: #E0F2FE;
+  --color-lumi-orange: #FFF2E6;
+}
+
+/* Base custom interactive scrollbar rules */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 110, 115, 0.15);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 110, 115, 0.3);
+}
+
+/* Custom premium styles for glassmorphism */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.glass-panel-dark {
+  background: rgba(18, 18, 20, 0.65);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-pill {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.glass-button {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-button-dark {
+  background: rgba(30, 30, 35, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Fluid luxury layout animations */
+@keyframes soft-pulse-blob-a {
+  0%, 100% { transform: translate(0px, 0px) scale(1.0); filter: blur(40px); }
+  33% { transform: translate(30px, -40px) scale(1.15); filter: blur(50px); }
+  66% { transform: translate(-20px, 20px) scale(0.9); filter: blur(45px); }
+}
+
+@keyframes soft-pulse-blob-b {
+  0%, 100% { transform: translate(0px, 0px) scale(1.0); filter: blur(45px); }
+  50% { transform: translate(-40px, 30px) scale(1.2); filter: blur(60px); }
+}
+
+.animate-pulse-blob-a {
+  animation: soft-pulse-blob-a 18s infinite ease-in-out;
+}
+
+.animate-pulse-blob-b {
+  animation: soft-pulse-blob-b 15s infinite ease-in-out;
+}
+
+/* Soft transition properties */
+.transition-glow {
+  transition: background-color 0.8s cubic-bezier(0.16, 1, 0.3, 1), 
+              opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+

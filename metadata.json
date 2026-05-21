@@ -1,0 +1,6 @@
+{
+  "name": "Lumi Glow",
+  "description": "Minimalist premium iOS atmosphere selfie fill-light tool featuring studio-quality dual lights and real-time custom filters.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

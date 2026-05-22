@@ -245,26 +245,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        {/* 4. Telemetry Portal Direct Trigger Button */}
-        <div className="mt-2.5">
-          <button
-            onClick={() => {
-              onOpenAnalytics();
-            }}
-            className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-neutral-800 to-neutral-700 hover:from-neutral-900 hover:to-neutral-800 text-white font-medium text-xs tracking-wide shadow-md transition-all flex items-center justify-center gap-2"
-          >
-            <Activity className="w-4 h-4 text-pink-300 animate-pulse" />
-            {isZh ? '查看 Firebase 埋点监控看板' : 'Open Firebase Telemetry Lab'}
-          </button>
-          <p className="text-[9.5px] text-center text-neutral-400 mt-2 leading-normal">
-            {isZh
-              ? '内置符合 Firebase SDK 协议的用户行为观测器，点击切换补光灯与亮度，观察实时数据上报。'
-              : 'Interactive developer analytics monitor mapped to evaluate user preset choices.'}
-          </p>
-        </div>
-
-        {/* 5. Minimal footer credits */}
-        <div className="text-center py-4 border-t border-pink-50 text-[10px] text-neutral-400 flex flex-col items-center gap-1">
+        {/* 4. Minimal footer credits */}
+        <div className="text-center py-4 border-t border-pink-50 text-[10px] text-neutral-400 flex flex-col items-center gap-1 mt-4">
           <span>Lumi Glow v1.0.0 (Atmosphere Special Edit)</span>
           <span>© 2026 App Store "Lumi Glow" Light Design Lab</span>
         </div>

@@ -75,55 +75,57 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
                 : preset.id === splitPresetRight.id;
           }
 
-          return (
-            <button
-              key={preset.id}
-              data-preset-id={preset.id}
-              onClick={() => {
-                if (splitMode === 'none') {
-                  onSelect(preset);
-                } else if (onSelectSplitSide) {
-                  onSelectSplitSide(preset, selectedSplitSide);
-                }
-              }}
-              className={`flex-shrink-0 w-20 flex flex-col items-center gap-2 snap-center transition-all duration-300 relative focus:outline-none`}
-            >
-              {/* Outer Aspect Box */}
-              <div
-                className={`w-full aspect-square rounded-[24px] p-1 shadow-sm transition-all duration-300 ${
-                  isActive
-                    ? 'border-2 scale-105'
-                    : 'border-2 border-transparent opacity-65 hover:opacity-100 scale-95'
-                }`}
-                style={{
-                  background: `linear-gradient(to bottom, ${preset.color}, ${preset.accentColor}dd)`,
-                  borderColor: isActive ? '#2D2D2D' : 'transparent',
+            return (
+              <button
+                key={preset.id}
+                data-preset-id={preset.id}
+                onClick={() => {
+                  if (splitMode === 'none') {
+                    onSelect(preset);
+                  } else if (onSelectSplitSide) {
+                    onSelectSplitSide(preset, selectedSplitSide);
+                  }
                 }}
+                className="flex-shrink-0 w-20 flex flex-col items-center gap-2 snap-center transition-all duration-300 relative focus:outline-none"
               >
-                <div className="w-full h-full rounded-[18px] bg-white/40 flex items-center justify-center relative">
-                  {isActive && (
-                    <div className="w-5 h-5 rounded-full bg-[#2D2D2D] text-white flex items-center justify-center shadow-md animate-scale-in">
-                      <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Preset Labels */}
-              <div className="text-center">
-                <p
-                  className={`text-[11px] tracking-tight font-sans transition-colors font-medium ${
-                    isActive ? 'text-[#2D2D2D] font-semibold' : 'text-[#2D2D2D]/60'
+                {/* Frosted Glass Floating Swatch Orb with White Halo */}
+                <div
+                  className={`w-14 h-14 rounded-full p-0.5 transition-all duration-300 relative ${
+                    isActive
+                      ? 'scale-110 border-2 border-white/95'
+                      : 'border border-white/20 opacity-70 hover:opacity-100 scale-95'
                   }`}
+                  style={{
+                    background: `linear-gradient(135deg, ${preset.color} 30%, ${preset.accentColor || preset.color}dd 100%)`,
+                    boxShadow: isActive 
+                      ? `0 0 16px ${preset.accentColor || preset.color}, 0 0 8px rgba(255,255,255,0.8), inset 0 1px 2px rgba(255,255,255,0.4)`
+                      : '0 4px 10px rgba(0,0,0,0.05), inset 0 1px 2px rgba(255,255,255,0.2)',
+                  }}
                 >
-                  {preset.name}
-                </p>
-                <span className="text-[8px] tracking-widest font-heading text-[#2D2D2D]/40 uppercase block">
-                  {preset.englishName}
-                </span>
-              </div>
-            </button>
-          );
+                  <div className="w-full h-full rounded-full bg-white/15 backdrop-blur-[2px] flex items-center justify-center relative">
+                    {isActive && (
+                      <div 
+                        className="w-4.5 h-4.5 rounded-full bg-white text-[#2D2D2D] flex items-center justify-center shadow-lg animate-scale-in"
+                        style={{ boxShadow: '0 2px 8px rgba(255,255,255,0.9)' }}
+                      >
+                        <Check className="w-2.5 h-2.5" strokeWidth={4} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Preset Labels */}
+                <div className="text-center">
+                  <p
+                    className={`text-[11px] tracking-tight font-sans transition-colors font-medium ${
+                      isActive ? 'text-[#2D2D2D] font-bold' : 'text-[#2D2D2D]/60'
+                    }`}
+                  >
+                    {preset.name}
+                  </p>
+                </div>
+              </button>
+            );
         })}
       </div>
     </div>

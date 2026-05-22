@@ -35,3 +35,17 @@ export interface AppSettings {
   mirrorCamera: boolean;
   highQualityStream: boolean;
 }
+
+export interface CapturedPhoto {
+  id: string;
+  timestamp: number;
+  presetColor: string;
+  presetName: string;
+  splitMode: SplitMode;
+  splitLeftColor?: string;
+  splitRightColor?: string;
+  brightness: number;
+  softness: number;
+  cameraFilterClass?: string;
+  photoUrl?: string;
+}

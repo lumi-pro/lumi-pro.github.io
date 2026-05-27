@@ -27,6 +27,7 @@ interface CameraViewProps {
   language?: string;
   onAmbientDetected?: (stats: { brightness: number; warmth: number }) => void;
   simulatedScenario?: string;
+  intensityLevel?: 'soft' | 'normal' | 'rich' | 'studio';
 }
 
 export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraViewProps>(({
@@ -46,6 +47,7 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
   language = 'zh',
   onAmbientDetected,
   simulatedScenario = 'none',
+  intensityLevel = 'normal',
 }, ref) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -312,9 +314,15 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
 
   // Natural exposure booster styling for natural-looking illumination inside viewfinder
   const getCameraFilterStyle = () => {
+    const intensityModifier = 
+      intensityLevel === 'soft' ? -0.06 :
+      intensityLevel === 'normal' ? 0 :
+      intensityLevel === 'rich' ? 0.08 :
+      0.16; // Studio master continuous high key power!
+
     const contrastPct = 96 - (softness - 0.5) * 8; // gentle soft contrast drop for smooth skin tone integration
     const saturatePct = 103 + (brightness - 0.5) * 6; // slightly healthier lip/cheek pink balance
-    const exposureBoost = 1.05 + (brightness - 0.5) * 0.28; // high illumination boost for darker environments
+    const exposureBoost = 1.05 + (brightness - 0.5) * 0.28 + intensityModifier; // high illumination boost for darker environments
     return {
       filter: `contrast(${contrastPct}%) saturate(${saturatePct}%) brightness(${exposureBoost})`,
     };
@@ -486,16 +494,27 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
           background: splitMode === 'none'
             ? `radial-gradient(circle at 50% 45%, ${activePreset.color}db 0%, transparent 68%)`
             : `linear-gradient(to right, ${splitPresetLeft.color}bf 0%, rgba(255,255,255,0.2) 50%, ${splitPresetRight.color}bf 100%)`,
-          opacity: brightness * 0.08,
+          opacity: brightness * 0.08 * (
+            intensityLevel === 'soft' ? 0.45 :
+            intensityLevel === 'normal' ? 1.0 :
+            intensityLevel === 'rich' ? 1.70 :
+            2.50
+          ),
         }}
       />
+
 
       {/* Premium Under-eye & shadow corrector vector glow for facial light lift */}
       <div 
         className="absolute inset-0 pointer-events-none mix-blend-overlay transition-opacity duration-300 z-18"
         style={{
           background: 'radial-gradient(circle at 50% 50%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.3) 25%, transparent 65%)',
-          opacity: brightness * softness * 0.35,
+          opacity: brightness * softness * 0.35 * (
+            intensityLevel === 'soft' ? 0.6 :
+            intensityLevel === 'normal' ? 1.0 :
+            intensityLevel === 'rich' ? 1.4 :
+            1.9
+          ),
         }}
       />
 
@@ -504,7 +523,12 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
         className="absolute inset-0 pointer-events-none mix-blend-soft-light transition-opacity duration-500 z-12"
         style={{
           background: 'linear-gradient(210deg, rgba(255,255,255,0.4) 0%, transparent 70%)',
-          opacity: brightness * 0.2,
+          opacity: brightness * 0.2 * (
+            intensityLevel === 'soft' ? 0.6 :
+            intensityLevel === 'normal' ? 1.0 :
+            intensityLevel === 'rich' ? 1.5 :
+            2.1
+          ),
         }}
       />
 

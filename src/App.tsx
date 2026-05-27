@@ -119,6 +119,7 @@ export default function App() {
 
   const [brightness, setBrightness] = useState<number>(0.85); // 15% to 100%
   const [softness, setSoftness] = useState<number>(0.65); // Color saturation/dilution
+  const [intensityLevel, setIntensityLevel] = useState<'soft' | 'normal' | 'rich' | 'studio'>('normal');
 
   // AI Ambient Light Recommendation Engine States
   const [ambientStats, setAmbientStats] = useState<{ brightness: number; warmth: number }>({
@@ -326,102 +327,394 @@ export default function App() {
   }, [sessionTime]);
 
   const getRecommendation = (bright: number, warm: number) => {
-    // 1. Analyze environment variables
+    // 1. Determine if it is night time
     const currentHour = new Date().getHours();
     const isNight = currentHour >= 18 || currentHour < 6;
-    
+
     // Day/Night
     const detectedTime = isNight 
-      ? (isZh ? '深夜时分 🌌' : 'Late Night 🌌') 
-      : (isZh ? '日光时分 ☀️' : 'Daylight Hour ☀️');
+      ? (isZh ? '深夜夜色 🌌' : 'Late Night 🌌') 
+      : (isZh ? '明净日光 ☀️' : 'Daylight Hour ☀️');
 
-    // Indoor/Outdoor
-    const isOutdoor = bright > 165 || simulatedScenario === 'daylight_bright';
-    const detectedPlace = isOutdoor 
-      ? (isZh ? '室外日光充盈' : 'Bright Outdoor') 
-      : (isZh ? '舒适室内空间' : 'Cozy Indoor Studio');
-
-    // Environment Brightness
-    let detectedBright = isZh ? '环境昏暗' : 'Dim Ambient';
-    if (bright > 150) {
-      detectedBright = isZh ? '光照极亮' : 'Ultra Bright';
-    } else if (bright >= 85) {
-      detectedBright = isZh ? '光照柔和' : 'Soft Indoor Light';
+    // Resolve the simulated active scenario or fallback to physical camera sliders:
+    let effectiveScenId = simulatedScenario;
+    if (effectiveScenId === 'none') {
+      if (bright > 165) {
+        effectiveScenId = 'daylight_bright';
+      } else if (warm > 1.35) {
+        effectiveScenId = bright < 90 ? 'dark_warm' : 'warm_restaurant';
+      } else if (warm < 0.85 && bright < 95) {
+        effectiveScenId = 'night_cool';
+      } else {
+        effectiveScenId = 'normal';
+      }
     }
 
-    // Warmth/Temperature
-    let detectedWarm = isZh ? '冷色蓝调/Cold temp' : 'Cool Blue Temp';
-    if (warm > 1.25) {
-      detectedWarm = isZh ? '暖黄色调/Warm temp' : 'Warm Orange/Yellow';
-    } else if (warm >= 0.88) {
-      detectedWarm = isZh ? '温和中性/Neutral temp' : 'Neutral Safe Temp';
-    }
-
-    // BG Color Estimation
-    let detectedBg = isZh ? '低饱和素雅灰' : 'Neutral Pastel Gray';
-    if (warm > 1.4) {
-      detectedBg = isZh ? '深橙香槟色背景' : 'Warm Champagne Hue';
-    } else if (warm > 1.20) {
-      detectedBg = isZh ? '温馨浅麦黄背景' : 'Soft Ambient Warm Gold';
-    } else if (warm < 0.85) {
-      detectedBg = isZh ? '幽蓝/深邃冷灰背景' : 'Icy Deep Cobalt Background';
-    }
-
-    // Face / Skin State prediction
-    let detectedSkin = isZh ? '肤色相对润泽' : 'Skin state hydrated';
-    if (simulatedScenario === 'dull') {
-      detectedSkin = isZh ? '因疲态略显暗沉' : 'Fatigued & Slightly Dull';
-    } else if (bright < 85 && warm > 1.2) {
-      detectedSkin = isZh ? '环境过暖脸部显黄' : 'Tone yellowed by warm light';
-    } else if (bright < 85 && warm < 0.9) {
-      detectedSkin = isZh ? '低光导致脸色无神' : 'Lacks glow & pale dark shadow';
-    } else if (bright > 165) {
-      detectedSkin = isZh ? '日光爆满，局部过曝' : 'Highly exposed under sunlight';
-    }
-
-    // 2. Base Recommendation Rules
     let presetId = 'cream';
+    let labelZh = '原生亮肤';
+    let labelEn = 'Original Luster';
+
+    // Human characteristic dimensions
+    let pSkinTempZh = '';
+    let pSkinTempEn = '';
+    let pBrightnessZh = '';
+    let pBrightnessEn = '';
+    let pShadowsZh = '';
+    let pShadowsEn = '';
+    let pDullnessZh = '';
+    let pDullnessEn = '';
+    let pMakeupZh = '';
+    let pMakeupEn = '';
+    let p3DZh = '';
+    let p3DEn = '';
+    let pEyeShadowZh = '';
+    let pEyeShadowEn = '';
+
+    // Background characteristic dimensions
+    let bgLampZh = '';
+    let bgLampEn = '';
+    let bgWallZh = '';
+    let bgWallEn = '';
+    let bgNightZh = '';
+    let bgNightEn = '';
+    let bgInOutZh = '';
+    let bgInOutEn = '';
+    let bgTempZh = '';
+    let bgTempEn = '';
+
+    // Real-time Neural Process Logs (Steps)
+    let stepsZh: string[] = [];
+    let stepsEn: string[] = [];
+
     let baseAdviceZh = '';
     let baseAdviceEn = '';
-    let labelZh = '';
-    let labelEn = '';
 
-    if (simulatedScenario === 'dull') {
-      presetId = 'cream';
-      baseAdviceZh = '检测到你面部轻微疲惫暗沉。已为你加开 15% 漫反射补光，推荐经典「奶油肌」，立现婴儿般饱满好气色！';
-      baseAdviceEn = 'Fatigue state detected. Recommended "Cream Skin" to instantly restore smooth & bounce look!';
-      labelZh = '疲劳调和';
-      labelEn = 'Fatigue Neutralizer';
-    } else if (bright < 85 && warm > 1.25) {
+    // Legacy parameters for backward-compatibility support
+    let detectedBright = '';
+    let detectedWarm = '';
+    let detectedBg = '';
+    let detectedSkin = '';
+    let detectedPlace = '';
+
+    // Determine current makeup style based on aesthetic preferences chosen
+    const makeupStyleZh = preferences.styleMode === 'glamorous' 
+      ? '精致蜜桃腮红浓妆' 
+      : preferences.styleMode === 'cool_tech' 
+      ? '高级裸感冷调御姐妆' 
+      : '裸肌感日常元气淡妆';
+    const makeupStyleEn = preferences.styleMode === 'glamorous' 
+      ? 'Glamorous peach blush' 
+      : preferences.styleMode === 'cool_tech' 
+      ? 'Premium nude cool makeup' 
+      : 'Fresh natural light makeup';
+
+    // Core rule matrix targeting "how to make the user look gorgeous!"
+    if (effectiveScenId === 'dark_warm') {
       presetId = 'cold';
-      baseAdviceZh = '当前环境偏暖偏黄。Lumi 已经帮你准备好了冷调「冷白皮」补光，能完美中和暗黄、去黄提亮，皮肤一秒高级清透！';
-      baseAdviceEn = 'Surrounding light is too yellow. Applied cold "Ice White" filler to neutralize skin and pop high-fashion glow!';
-      labelZh = '去黄提亮';
-      labelEn = 'Warm Neutralizer';
-    } else if (bright < 95 && warm < 0.88) {
-      presetId = 'moonlight';
-      baseAdviceZh = '处于深夜冷调暗光。不建议调高刺眼亮光，已推荐微蓝色温「月光蓝」贴片，能在瞳孔中凝聚高雅通透的眼神光！';
-      baseAdviceEn = 'Deep night cold darkness. We avoided harsh glare and applied serene vibe "Moonlight" for precious eyes!';
-      labelZh = '瞳孔点亮';
-      labelEn = 'Deep Eyes Glitter';
-    } else if (warm > 1.32) {
-      presetId = 'sunset';
-      baseAdviceZh = '周围笼罩在温馨暖黄光圈下。何不顺应本真？已推荐偏粉橙调「日落橘」暖夕阳微光，打造极具情绪张力的胶片大片！';
-      baseAdviceEn = 'Warm environment detected. Try sunset-inspired retro "Sunset Glow" for storytelling cinematic look!';
-      labelZh = '日落情绪';
-      labelEn = 'Sunset Mood Art';
-    } else if (bright > 165) {
-      presetId = 'love';
-      baseAdviceZh = '户外光照非常饱满清亮。已推荐自带浪漫属性的「初恋粉」做辅色，不仅能防强光过曝，还能给脸庞透出少女红润！';
-      baseAdviceEn = 'Daylight is fully abundant. Recommended soft "First Love" backup to preserve highlight and insert pink blush!';
-      labelZh = '红润防暴';
-      labelEn = 'Rosy Skin Backup';
-    } else {
+      labelZh = '智能消黄';
+      labelEn = 'Tack Amber';
+
+      pSkinTempZh = '面色受射灯黄色杂光溢出影响，显著泛黄暗沉';
+      pSkinTempEn = 'Complexion warm yellowed by warm reflections';
+      pBrightnessZh = '微弱光线，面容整体处于暗影欠曝区间';
+      pBrightnessEn = 'Severely underexposed and dim overall';
+      pShadowsZh = '鼻侧、下巴区伴随较重的暖色侧向投影';
+      pShadowsEn = 'Heavy yellow side shadows detected';
+      pDullnessZh = '大量暖黄杂色堆积，引起皮肤通透度丧失，显暗沉';
+      pDullnessEn = 'Low transparency, heavy yellow pigment dullness';
+      pMakeupZh = makeupStyleZh;
+      pMakeupEn = makeupStyleEn;
+      p3DZh = '高对比度杂色阴影破坏面部骨相匀称度';
+      p3DEn = 'Irregular color tone compromises symmetry';
+      pEyeShadowZh = '眼周伴随发黄发暗的面颊大面积阴影及泪沟';
+      pEyeShadowEn = 'Strong under-eye shadow circles & crease line';
+
+      bgLampZh = '检测到大瓦数高热度暖黄顶灯投射';
+      bgLampEn = 'Cozy warm yellow high-noon spotlight spill';
+      bgWallZh = '白色反光墙面已被杂光污染折射为金黄色';
+      bgWallEn = 'Plain drywall stained by gold background glow';
+      bgNightZh = '属于低能见度暗室或夜里暖光环境';
+      bgNightEn = 'Lowlight nighttime warm indoor setting';
+      bgInOutZh = '中低照度室内封闭空间';
+      bgInOutEn = 'Enclosed interior lounge room';
+      bgTempZh = '重度暖黄色温 (3200K高暖色频段)';
+      bgTempEn = 'Extreme warm amber shift (approx 3200K)';
+
+      baseAdviceZh = '检测到您正处于低亮暖黄光线中，肤色因偏黄而显得黯淡。已为您一键注入冷色调「冷白皮」补光源，完美对冲消暗，抚平因顶光产生的眼袋阴影，重塑白皙高级清冷脸！';
+      baseAdviceEn = 'Dim warm lighting detected causing dull skin. Formulized crisp "Ice White" active correction to offset yellow tint and blend under-eye bags, granting clean, premium cool-toned elegance.';
+
+      stepsZh = [
+        '检测到强烈的室内硬光及高功率暖黄顶灯反射',
+        '肤色泛黄气色差，双眼眶下落微弱黑眼圈与眼睑阴影',
+        '自动应用「冷白皮」补水白光谱，中和暗黄杂色，立现高级清冷肌'
+      ];
+      stepsEn = [
+        'Harsh indoor warm yellow ceiling spotlight spill detected',
+        'Complexion yellowed and flat, fatigue shadow bags cast under eyes',
+        'Formulated custom "Ice White" spectrum to neutralize amber, locking pristine clean cool complexion'
+      ];
+
+      detectedBright = isZh ? '环境过暖' : 'Ambient Too Warm';
+      detectedWarm = isZh ? '高热暖黄' : 'High Warm Amber';
+      detectedBg = isZh ? '橘黄偏色背景' : 'Yellow Stained Canvas';
+      detectedSkin = isZh ? '暗黄无神且深色黑眼圈' : 'Dull skin & dark eye-bags';
+      detectedPlace = isZh ? '暖黄密闭室内' : 'Dim Yellow Indoor';
+
+    } else if (effectiveScenId === 'dull' || (simulatedScenario === 'dull' && effectiveScenId === 'none')) {
       presetId = 'cream';
-      baseAdviceZh = '当前属于均衡光环境。已为你微调舒适暖光「奶油肌」，抹除面部细微暗哑，随手一拍即是通透原生感！';
-      baseAdviceEn = 'Uniform light detected. Suggested iconic Warm Soft "Cream Skin" to smoothly enrich face complexion!';
-      labelZh = '原生润肤';
-      labelEn = 'Natural Soften';
+      labelZh = '元气提亮';
+      labelEn = 'Skin Energizer';
+
+      pSkinTempZh = '中性偏温冷，脸部稍微苍白，欠缺血色';
+      pSkinTempEn = 'Neutral cool pale tone, lacks healthy flush';
+      pBrightnessZh = '常态照度均匀，但皮肤表面缺乏珠光光泽';
+      pBrightnessEn = 'Uniform light level but lacks skin lusters';
+      pShadowsZh = '鼻唇区、唇周等轻质细小灰暗阴影';
+      pShadowsEn = 'Minor downward flat crease lines';
+      pDullnessZh = '因熬夜略显暗沉，面泛青灰无光';
+      pDullnessEn = 'Slightly fatigued & tired grayish shade';
+      pMakeupZh = makeupStyleZh;
+      pMakeupEn = makeupStyleEn;
+      p3DZh = '面部明暗立体过渡偏于扁平';
+      p3DEn = 'Flat features, lacks spatial dimension';
+      pEyeShadowZh = '眼角有少许青色疲累感黑眼圈';
+      pEyeShadowEn = 'Minor fatigued bluish eye bags';
+
+      bgLampZh = '普通荧光灯散漫辐射，无刺眼集中点光源';
+      bgLampEn = 'No harsh point lights, generic diffusion';
+      bgWallZh = '白色亚光墙面，大范围反白折射冷光';
+      bgWallEn = 'Off-white wall reflections causing cold cast';
+      bgNightZh = '中规中矩的平常室内白昼';
+      bgNightEn = 'Normal daytime indoor shadow backdrop';
+      bgInOutZh = '常规中照度平稳室内空间';
+      bgInOutEn = 'Standard indoor workspace suite';
+      bgTempZh = '温和中冷色温 (5600K标准自然色)';
+      bgTempEn = 'Neutral comfortable natural point (5600K)';
+
+      baseAdviceZh = '当前大面积白墙反射导致面容略显灰涩疲惫。已为您推荐温润「奶油肌」填充光源，新增 15% 散光漫反射，轻轻抹平脸上细微阴影，恢复婴儿般白里透红的生机气色！';
+      baseAdviceEn = 'Flat off-white background detected making face pale. Customized cohesive "Cream Skin" light preset with 15% expanded diffusion to fill flat shadows for a plump, organic and bouncy fresh look.';
+
+      stepsZh = [
+        '大范围白墙漫反射大块冷光，肤色因灰白而显得没精神',
+        '面部稍微暗沉发灰，眼眶下方呈疲沉状态，阴影轮廓偏弱',
+        '极速注入细腻暖白「奶油肌」色彩填充，亮化腮红弧度，恢复饱满原生元气'
+      ];
+      stepsEn = [
+        'White walls reflecting flat cold cast, skin appears pale and grayish',
+        'Complexion shows minor skin fatigue with flattened face structures',
+        'Adjusted soft warm "Cream Skin" diffuse level, filling face with bouncy light'
+      ];
+
+      detectedBright = isZh ? '光影偏灰' : 'Grayish Light';
+      detectedWarm = isZh ? '中冷淡色' : 'Cool Gray Cast';
+      detectedBg = isZh ? '素雅白墙背景' : 'Plain Off-white Wall';
+      detectedSkin = isZh ? '因疲态略显暗沉' : 'Fatigued & Slightly Dull';
+      detectedPlace = isZh ? '平稳室内空间' : 'Standard Indoor';
+
+    } else if (effectiveScenId === 'warm_restaurant') {
+      presetId = 'sunset';
+      labelZh = '慵懒大片';
+      labelEn = 'Cinema Vibe';
+
+      pSkinTempZh = '莹润剔透的黄金蜜桃暖色温';
+      pSkinTempEn = 'Beautiful honey-peach warm golden tone';
+      pBrightnessZh = '画面黄金明暗半交碰，高低对比分明';
+      pBrightnessEn = 'Stunning golden division highlight';
+      pShadowsZh = '颧骨下凹部、鼻旁影区呈立体骨感过渡';
+      pShadowsEn = 'Beautiful smooth organic sculpted warm shadows';
+      pDullnessZh = '精神格外饱满，折射温润柔和质感';
+      pDullnessEn = 'Glowing with organic clear reflections';
+      pMakeupZh = makeupStyleZh;
+      pMakeupEn = makeupStyleEn;
+      p3DZh = '极佳的自来逆侧射影，面部骨相饱满鲜活';
+      p3DEn = 'Side golden beams highlight deep facial lines';
+      pEyeShadowZh = '眼下泪沟被香槟金色暖光柔美隐去';
+      pEyeShadowEn = 'Eye shadows well-blended with soft bronze hue';
+
+      bgLampZh = '检测到餐厅温馨氛围吊灯或下午茶斜晖暖光';
+      bgLampEn = 'Cozy dining ambient or lazy sunset sunset beams';
+      bgWallZh = '质感暖褐色奢华装饰面或木纹墙底';
+      bgWallEn = 'Wooden textures or decorative luxury backdrop';
+      bgNightZh = '属于慢生活的晚歇约会格调背景';
+      bgNightEn = 'Evening relaxing dining lounge background';
+      bgInOutZh = '高质素浪漫室内场所';
+      bgInOutEn = 'Atmospheric lounge table indoor';
+      bgTempZh = '温馨暖色温段 (2800K~3400K香槟度)';
+      bgTempEn = 'Warm cozy temperature range (approx 3000K)';
+
+      baseAdviceZh = '您宛如置身电影般的浪漫夕阳和煦暖辉中。无需用滤镜遮掩自然阴影！推荐偏暖粉橙调「日落橘」光晕，完美融合骨相轮廓，打造充满高级胶片质感与故事张力的艺术自拍！';
+      baseAdviceEn = 'Golden hour cozy dinner ambiance spotted. Recommends customized peach-orange "Sunset Glow" fill light to organically contour eyes and cheek shadow lines, capturing slow-sunset editorial films.';
+
+      stepsZh = [
+        '周围笼罩在温馨蜡烛与温馨射灯伴随的奢华金橙暖调里',
+        '骨相由于夕阳侧逆光富有绝佳明暗度，润泽无暗沉瑕疵',
+        '交叠融合「日落橘」暖调补光，复刻经典斜阳，尽显慵懒迷人意境'
+      ];
+      stepsEn = [
+        'Surroundings bathed in warm candle light and golden background glow',
+        'Portrait lines are extremely clear with elegant smooth nose reflections',
+        'Decorated with nostalgic sepia "Sunset Glow" to expand cinematic narrative warmth'
+      ];
+
+      detectedBright = isZh ? '温馨明和' : 'Cozy Light';
+      detectedWarm = isZh ? '暖黄色调' : 'Warm Orange/Yellow';
+      detectedBg = isZh ? '温馨暖色背景' : 'Ambiance Gold Backdrop';
+      detectedSkin = isZh ? '健康高红润，立体分明' : 'Moisturized & clear contours';
+      detectedPlace = isZh ? '格调雅致餐室' : 'Atmospheric Lounge';
+
+    } else if (effectiveScenId === 'night_cool') {
+      presetId = 'moonlight';
+      labelZh = '眼神点亮';
+      labelEn = 'Eye Sparkle';
+
+      pSkinTempZh = '偏向深暗幽冷、灰黑带蓝的清冷肤色';
+      pSkinTempEn = 'Cobalt deep night gray skin undertone';
+      pBrightnessZh = '画面超低能见度，轮廓细节严重丧失';
+      pBrightnessEn = 'Deep darkness, details severely shadowed';
+      pShadowsZh = '暗区遮盖了大范围额骨与颌下三角翼线';
+      pShadowsEn = 'Massive dark area under-chin and eyebrows';
+      pDullnessZh = '低质光影使整个人像丧失光彩，眼神无神';
+      pDullnessEn = 'Deprived of skin shine, eyes lack energy';
+      pMakeupZh = makeupStyleZh;
+      pMakeupEn = makeupStyleEn;
+      p3DZh = '面容深陷进墨黑背景中，被整体虚焦压缩';
+      p3DEn = 'Face elements blend in deep shadows';
+      pEyeShadowZh = '眼下方大范围泛青发青的熬夜疲惫黑眼圈';
+      pEyeShadowEn = 'Pronounced dark circles with cool blue color cast';
+
+      bgLampZh = '远处微弱霓虹闪烁或窗外少许深夜光斑';
+      bgLampEn = 'Faint twinkling urban city blue glow';
+      bgWallZh = '黑漆寂夜、阳台墨空或深冷幽蓝色背景';
+      bgWallEn = 'Plain deep pitch black night outdoors';
+      bgNightZh = '属于典型的深夜，四周低漫射空间';
+      bgNightEn = 'Late midnight silent environment';
+      bgInOutZh = '深夜室外露空或静谧暗卧房';
+      bgInOutEn = 'Deep night outdoor street or dim dark room';
+      bgTempZh = '清冷冰凉冷温段 (7500K极高色温)';
+      bgTempEn = 'Ice blue cobalt temperature cast (7500K)';
+
+      baseAdviceZh = '当前处于深夜幽静的黑夜冷光中。调高硬白强光会刺眼且显脸油，已为您定制微蓝色温「月光蓝」贴片，温柔消除发青眼圈，给清幽冷暗里在双眼皮点亮纯净夺目的眼神光！';
+      baseAdviceEn = 'Deep night cold darkness detected. Lumi avoided stark blinding flare and selected serene "Moonlight" cool halo to blur dark bags and reflect a glowing, romantic spark in your eyes.';
+
+      stepsZh = [
+        '身处深夜冰凉幽暗深色环境，被墨色幽青底调覆盖',
+        '面部晦暗无神，眼尾泪沟由于低照度显现出沉闷青灰色黑眼圈',
+        '注入不晃眼的「月光蓝」浅幽微弱光束，聚焦清朗视线，让双眼流盼神采'
+      ];
+      stepsEn = [
+        'Detected deep quiet midnight environment with extremely low illumination',
+        'Complexion dry and underexposed, accompanied by bluish under-eye circles',
+        'Fitted precise cozy "Moonlight" light overlay to melt eye bags, locking gorgeous eye sparkles'
+      ];
+
+      detectedBright = isZh ? '夜暮低能' : 'Midnight Dark';
+      detectedWarm = isZh ? '冷色蓝调' : 'Cool Blue Temp';
+      detectedBg = isZh ? '深邃冷灰背景' : 'Icy Deep Cobalt Background';
+      detectedSkin = isZh ? '低光导致脸色无神' : 'Lacks glow & pale dark shadow';
+      detectedPlace = isZh ? '幽美深夜环境' : 'Deep Night Outdoor';
+
+    } else if (effectiveScenId === 'daylight_bright') {
+      presetId = 'love';
+      labelZh = '红润防暴';
+      labelEn = 'Rosy Balance';
+
+      pSkinTempZh = '高明度中性清亮红润底质';
+      pSkinTempEn = 'High brightness natural neutral clean skin tone';
+      pBrightnessZh = '光通量极其饱满，正面主光直射较强';
+      pBrightnessEn = 'Abundant sunshine, near overexposure range';
+      pShadowsZh = '局部硬光反射，多见于颧骨、鼻尖顶光面';
+      pShadowsEn = 'Harsh solar peak spot glare';
+      pDullnessZh = '润透无暇，面颊表皮细胞质感极其剔透';
+      pDullnessEn = 'Squeaky clean, outstanding clarity';
+      pMakeupZh = makeupStyleZh;
+      pMakeupEn = makeupStyleEn;
+      p3DZh = '主光源垂直照度过大，使得五官少许向平面压缩';
+      p3DEn = 'Sunlight glare slightly compresses facial depth';
+      pEyeShadowZh = '眼袋及泪沟区域被太阳光完全透反消除';
+      pEyeShadowEn = 'Eye circles perfectly vaporized by sunshine';
+
+      bgLampZh = '大红外日光极昼投射，采光面积充盈';
+      bgLampEn = 'Full sunshine beam coverage';
+      bgWallZh = '室外绿植林木、湛蓝晴天或亮色建筑物外立面';
+      bgWallEn = 'Glistening outdoor garden or sky background';
+      bgNightZh = '典型的明亮充沛白天';
+      bgNightEn = 'Vibrant daylight midday hours';
+      bgInOutZh = '视野开阔的户外场景';
+      bgInOutEn = 'Open-air clear outdoor area';
+      bgTempZh = '充溢原生日光温段 (5800K阳光原生态)';
+      bgTempEn = 'Natural daylight balanced status (approx 5800K)';
+
+      baseAdviceZh = '户外日光极其充溢白哲。但猛烈直射容易使面相缺乏气色红润、五官偏扁平。特意为您调配自带心动红晕「初恋粉」辅色漫反射，精妙收拢过曝高亮，由内而外透显初恋般的粉嫩绯红！';
+      baseAdviceEn = 'Glistening daylight detected. High intensity daylight can wash out contours, hence Lumi recommended warm peach "First Love" schema to soft-focus solar highlights and deposit a gorgeous natural pink blush.';
+
+      stepsZh = [
+        '大面积室外强烈自然天光投射，整体呈现超强饱满照度环境',
+        '皮肤通透亮白，但由于大平光五官骨相缺乏过渡梯度、粉嫩红润感较少',
+        '自适应调入「初恋粉」梦幻红润辅照，中高亮压平并红润飞颊，定格初恋少女感'
+      ];
+      stepsEn = [
+        'Excessive daylight beams detected with open-air sunlit background',
+        'Complexion clear and radiant but slightly flat, missing soft color life',
+        'Applied dreamy rose "First Love" light profile to absorb wild glare, yielding fresh sweet blush'
+      ];
+
+      detectedBright = isZh ? '光照爆满' : 'Ultra Bright';
+      detectedWarm = isZh ? '均衡日光' : 'Daylight Balanced';
+      detectedBg = isZh ? '野外自然光背景' : 'Natural Open Background';
+      detectedSkin = isZh ? '日光饱润，局部过曝' : 'Highly exposed under sunlight';
+      detectedPlace = isZh ? '明朗晴空户外' : 'Sunny Outdoor Arena';
+
+    } else {
+      // Normal Uniform Cozy Indoor
+      presetId = 'cream';
+      labelZh = '原生亮嫩';
+      labelEn = 'Natural Soft';
+
+      pSkinTempZh = '适中均衡，暖白偏米黄色感';
+      pSkinTempEn = 'Balanced comfortable warm-neutral skin frame';
+      pBrightnessZh = '各区域采光十分和谐匀称，细节极为丰满';
+      pBrightnessEn = 'Cohesive perfect skin illuminance density';
+      pShadowsZh = '仅侧翼骨线及嘴部下凹区带有轻微柔和软影';
+      pShadowsEn = 'Soft gradient standard shadow traces';
+      pDullnessZh = '中等净透，面颊有些微普通灰调累积';
+      pDullnessEn = 'Normal smooth layer with minor flat gray';
+      pMakeupZh = makeupStyleZh;
+      pMakeupEn = makeupStyleEn;
+      p3DZh = '面部五官过渡舒缓、左右两侧骨骼匀对称';
+      p3DEn = 'Symmetric profile, normal clear face lines';
+      pEyeShadowZh = '眼角下方有非常隐蔽的常规轻薄暗网影';
+      pEyeShadowEn = 'Barely visible normal natural eye line shadow';
+
+      bgLampZh = '室内LED天花灯漫漫反光，柔和宜人';
+      bgLampEn = 'Cozy LED ceiling illumination';
+      bgWallZh = '温馨舒适的室内居室白粉墙面';
+      bgWallEn = 'Minimalist light gray interior apartment drywall';
+      bgNightZh = '日光通过纱帘射入的安静百搭生活场景';
+      bgNightEn = 'Gentle home window shade daytime backdrop';
+      bgInOutZh = '常规明亮平柔的室内客厅/卧室';
+      bgInOutEn = 'Sober light-balanced interior';
+      bgTempZh = '和润中性浅白色温频 (4500K标准家政光)';
+      bgTempEn = 'Balanced normal cozy temp (approx 4500K)';
+
+      baseAdviceZh = '当前室内光照温和常态。已为您选配舒适柔亮「奶油肌」自适应温光，配合微弱漫光削平脸中部不平伏的细小泪沟。轻松按下它，皮肤宛若无瑕婴儿，直出温润天生好气色！';
+      baseAdviceEn = 'Balanced indoor lighting detected. Recommended iconic Warm Soft "Cream Skin" to erase micro nose folds and supply smooth velvet lusters, granting an effortless healthy and natural portrait look.';
+
+      stepsZh = [
+        '检测到温和协调的标准室内环境光影，反射纯色亚光灰墙面',
+        '面部气色均匀挺括，但神态稍微有一丝常规单调，脸颊弧度较平淡',
+        '搭载最温顺的经典「奶油肌」补色彩，微补温光高亮，磨砂淡化毛孔粗糙'
+      ];
+      stepsEn = [
+        'Standard uniform stable light detected, bouncing on light gray studio back',
+        'Face contours look normal, skin is symmetric but slightly plain',
+        'Embedded "Cream Skin" preset to enrich cheeks with fine warm-glow pearl highlights'
+      ];
+
+      detectedBright = isZh ? '照度均衡' : 'Uniform Ambient';
+      detectedWarm = isZh ? '中性温顺' : 'Neutral Temperature';
+      detectedBg = isZh ? '低饱和素雅灰' : 'Neutral Pastel Gray';
+      detectedSkin = isZh ? '肤色相对润泽' : 'Skin state hydrated';
+      detectedPlace = isZh ? '普通舒适室内' : 'Cozy Indoor Space';
     }
 
     // 3. User Aesthetic Preference Adjustment Overlay!
@@ -430,24 +723,44 @@ export default function App() {
     const favName = favPreset ? (isZh ? favPreset.name : favPreset.englishName) : '';
 
     if (preferences.styleMode === 'cool_tech' && presetId !== 'cold' && presetId !== 'moonlight') {
-      // User loves Cool style, offset recommendation!
       presetId = 'cold';
-      baseAdviceZh = `【已依偏好偏移】检测到你近期在 Lumi 中偏爱「高级冷色」审美。我们特意将推荐方案偏移为「冷白皮」，直接拍照，已剔除复杂曝光！`;
-      baseAdviceEn = `[Aesthetic Preference Offset] Knowing your custom taste is cool-toned, Lumi automatically calibrated to "Ice White"!`;
-      memoryEffect = isZh ? '✦ 已依偏好转换为高级冷感自拍配方' : '✦ Balanced for Cold High-Fashion preference';
+      baseAdviceZh = `【已结合自拍习惯调校】感应到您近期在 Lumi 中高频喜好「高级冷色」美学偏爱。传感器已自动将策略偏移为「冷白皮」，直接拍照，已过滤多余繁杂橘黄杂光，立现高冷白皙御姐肤！`;
+      baseAdviceEn = `[Aesthetic Bias Applied] Knowing your signature taste is cool-toned, Lumi automatically calibrated recommendation to ice-light "Ice White" active filter, filtering warm environment stains.`;
+      memoryEffect = isZh ? '✦ 已依偏好转换为高级冷感自拍对冲配方' : '✦ Balanced for Cold High-Fashion preference';
+
+      stepsZh = [
+        stepsZh[0],
+        isZh ? '💡 【用户偏向激活】捕获到您近期热爱「高级冷色」自拍偏好色彩' : '💡 [Bias Active] User loves cold high-fashion photo style',
+        isZh ? '已特别转换为冷感「冷白皮」补调，多层溢增蓝白补光以呈现极致高冷感' : 'Shifted target palette to crisp "Ice White" filler to satisfy cool-tone elegance styling'
+      ];
+      stepsEn = [
+        stepsEn[0],
+        '💡 [Bias Active] User loves cool modern picture aesthetic',
+        'Shifted primary tuning parameters to "Ice White" to emphasize colder premium luxury complexions'
+      ];
     } else if (preferences.styleMode === 'glamorous' && presetId !== 'love') {
       presetId = 'love';
-      baseAdviceZh = `【已依偏好偏移】结合你喜爱的「甜系氛围」习惯，正在为你输出「初恋粉」补发光。柔亮漫射，已帮你将自拍照调整得粉嫩又高级！`;
-      baseAdviceEn = `[Aesthetic Preference Offset] To cater your "Sweet Blush" style preference, we automatically applied "First Love" vibe!`;
-      memoryEffect = isZh ? '✦ 已融入甜美粉嫩自拍特调算法' : '✦ Infused with Sweet Pinkish glow';
+      baseAdviceZh = `【已结合自拍习惯调校】感应到您当前追光偏好「甜美粉嫩」。AI 已自动倾斜至梦幻暖甜的「初恋粉」补发光谱，消解平淡苍白，让脸颊自带粉润微醺妆底！`;
+      baseAdviceEn = `[Aesthetic Bias Applied] To flatter your personalized sweetness expectation, Lumi has shifted recommendation to soft rose "First Love", erasing pale flat tones with dreamy sweet highlights.`;
+      memoryEffect = isZh ? '✦ 已结合自拍习惯：浪漫粉嫩红脸自适应美学算法' : '✦ Style Bias adjusted to sweet First Love Pink';
+
+      stepsZh = [
+        stepsZh[0],
+        isZh ? '💡 【用户偏向激活】检测到您的近期追光偏向「甜系氛围」美感习惯' : '💡 [Bias Active] Preference for romantic blush filters detected',
+        isZh ? '已专门转换为「初恋粉」补光方案，温润漫射桃花微红，立现桃花粉嫩心动颜' : 'Translated default suggestion into cherry blossom rosy "First Love" light aura'
+      ];
+      stepsEn = [
+        stepsEn[0],
+        '💡 [Bias Active] Knowing your preference for sweet portrait aesthetics',
+        'Overrode target schema with pinkish glow "First Love" to outline youthful flush'
+      ];
     } else {
-      // General feedback mentioning how they look gorgeous/Lumi gets smarter
       if (preferences.favoritePresetId && favName) {
         memoryEffect = isZh 
-          ? `✦ 契合你偏爱的「${favName}」偏色 (已累计应用 ${preferences.usageCounts[preferences.favoritePresetId] || 1} 次)`
+          ? `✦ 契合您偏爱的「${favName}」补色 (近期已累计累计应用度达 ${preferences.usageCounts[preferences.favoritePresetId] || 1} 次)`
           : `✦ Harmonized with your staple 「${favName}」 preference`;
       } else {
-        memoryEffect = isZh ? '✦ Lumi 已经为你调好了。点按即可，瞬间变好看' : '✦ Lumi AI auto-applied, snapshot ready!';
+        memoryEffect = isZh ? '✦ Lumi 已经为您感应完毕。点按快门即可，瞬间变好看！' : '✦ Lumi AI auto-applied, snapshot ready!';
       }
     }
 
@@ -457,6 +770,40 @@ export default function App() {
       adviceEn: baseAdviceEn,
       labelZh,
       labelEn,
+      
+      // Human characteristics
+      portraitSkinTempZh: pSkinTempZh,
+      portraitSkinTempEn: pSkinTempEn,
+      portraitBrightnessZh: pBrightnessZh,
+      portraitBrightnessEn: pBrightnessEn,
+      portraitShadowsZh: pShadowsZh,
+      portraitShadowsEn: pShadowsEn,
+      portraitDullnessZh: pDullnessZh,
+      portraitDullnessEn: pDullnessEn,
+      portraitMakeupZh: pMakeupZh,
+      portraitMakeupEn: pMakeupEn,
+      portrait3DZh: p3DZh,
+      portrait3DEn: p3DEn,
+      portraitEyeShadowZh: pEyeShadowZh,
+      portraitEyeShadowEn: pEyeShadowEn,
+
+      // Background characteristics
+      bgLampZh,
+      bgLampEn,
+      bgWallZh,
+      bgWallEn,
+      bgNightZh,
+      bgNightEn,
+      bgInOutZh,
+      bgInOutEn,
+      bgTempZh,
+      bgTempEn,
+
+      // Neural Step Log
+      stepsZh,
+      stepsEn,
+
+      // Legacy compatibility tags
       detectedBright,
       detectedWarm,
       detectedBg,
@@ -650,6 +997,8 @@ export default function App() {
         softness: softness,
         cameraFilterClass: activePreset.cameraFilterClass,
         photoUrl: photoUrlString,
+        viewfinderSize: viewfinderSize,
+        intensityLevel: intensityLevel,
       };
 
       setCapturedPhotos((prev) => {
@@ -811,6 +1160,46 @@ export default function App() {
     }
   };
 
+  const getViewfinderStyle = () => {
+    const shadowIntensityMultiplier = 
+      intensityLevel === 'soft' ? 0.35 :
+      intensityLevel === 'normal' ? 1.0 :
+      intensityLevel === 'rich' ? 1.95 :
+      3.20; // Massive continuous studio bloom!
+
+    const shadowBlurRadius = 
+      intensityLevel === 'soft' ? '30px' :
+      intensityLevel === 'normal' ? '70px' :
+      intensityLevel === 'rich' ? '120px' :
+      '180px';
+
+    const baseShadow = `0 24px 60px -15px rgba(0,0,0,0.6), 0 0 ${shadowBlurRadius} ${15 * shadowIntensityMultiplier}px ${splitMode === 'none' ? activePreset.color : splitPresetLeft.color}a4`;
+    
+    if (viewfinderSize === 'standard') {
+      return {
+        width: 'min(100%, calc(46vh * 0.75))',
+        aspectRatio: '3/4',
+        maxHeight: '46vh',
+        boxShadow: baseShadow,
+      };
+    }
+    if (viewfinderSize === 'compact') {
+      return {
+        width: 'min(70%, calc(35vh * 0.75))',
+        aspectRatio: '3/4',
+        maxHeight: '35vh',
+        boxShadow: baseShadow,
+      };
+    }
+    // circle
+    return {
+      width: 'min(55%, calc(25vh))',
+      aspectRatio: '1/1',
+      maxHeight: '25vh',
+      boxShadow: baseShadow,
+    };
+  };
+
   return (
     <div 
       className="fixed inset-0 w-full h-full text-neutral-800 relative overflow-hidden flex flex-col font-sans select-none transition-all duration-300"
@@ -887,7 +1276,7 @@ export default function App() {
 
           <div className="relative group">
             <div
-              className={`w-44 h-60 md:w-56 md:h-76 rounded-[40px] overflow-hidden border-4 border-white shadow-2xl flex items-center justify-center bg-[#070709] relative ${
+              className={`w-44 aspect-[3/4] md:w-56 rounded-[40px] overflow-hidden border-4 border-white shadow-2xl flex items-center justify-center bg-[#070709] relative ${
                 settings.mirrorCamera ? 'mirror-pip' : ''
               }`}
             >
@@ -908,6 +1297,7 @@ export default function App() {
                 language={settings.language}
                 onAmbientDetected={setAmbientStats}
                 simulatedScenario={simulatedScenario}
+                intensityLevel={intensityLevel}
               />
             </div>
           </div>
@@ -945,7 +1335,7 @@ export default function App() {
         {/* Top Control Bar */}
         <div className="w-full flex items-center justify-between mb-2 select-none">
           <div className="flex items-center gap-1.5">
-            <span className="bg-black/60 text-white border border-white/10 px-3.5 py-1.5 rounded-full font-serif font-black italic text-sm tracking-widest shadow-lg backdrop-blur-md">
+            <span className="bg-black/20 text-white border border-white/10 px-3 py-1 rounded-full font-serif font-black italic text-sm tracking-widest shadow-md backdrop-blur-md">
               Lumi
             </span>
             {splitMode !== 'none' && (
@@ -956,7 +1346,7 @@ export default function App() {
           </div>
 
           {/* Icons Bar Capsule (Apple Studio design) */}
-          <div className="flex items-center gap-0.5 bg-black/60 border border-white/10 backdrop-blur-md px-1 py-1 rounded-full shadow-xl transition-all">
+          <div className="flex items-center gap-0.5 bg-black/20 border border-white/10 backdrop-blur-md px-1 py-1 rounded-full shadow-lg transition-all">
             <button
               onClick={() => {
                 playSound('click');
@@ -997,13 +1387,11 @@ export default function App() {
         <div className="flex-1 w-full flex flex-col items-center justify-center overflow-hidden py-1 min-h-[35vh]">
           <div 
             className={`overflow-hidden relative transition-all duration-500 ease-out border-4 border-white/85 bg-stone-950
-              ${viewfinderSize === 'standard' ? 'w-full aspect-[3/4] max-h-[46vh] rounded-[36px]' : ''}
-              ${viewfinderSize === 'compact' ? 'w-[70%] aspect-[3/4] max-h-[35vh] rounded-[32px]' : ''}
-              ${viewfinderSize === 'circle' ? 'w-[55%] aspect-square rounded-full' : ''}
+              ${viewfinderSize === 'standard' ? 'rounded-[36px]' : ''}
+              ${viewfinderSize === 'compact' ? 'rounded-[32px]' : ''}
+              ${viewfinderSize === 'circle' ? 'rounded-full' : ''}
             `}
-            style={{
-              boxShadow: `0 24px 60px -15px rgba(0,0,0,0.6), 0 0 70px 15px ${splitMode === 'none' ? activePreset.color : splitPresetLeft.color}a4`
-            }}
+            style={getViewfinderStyle()}
           >
             <CameraView
               ref={mainCameraRef}
@@ -1022,11 +1410,12 @@ export default function App() {
               language={settings.language}
               onAmbientDetected={setAmbientStats}
               simulatedScenario={simulatedScenario}
+              intensityLevel={intensityLevel}
             />
 
             {/* Split controls overlay */}
             {splitMode !== 'none' && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-35 flex gap-1 bg-black/60 border border-white/10 backdrop-blur-md p-1 rounded-full shadow-2xl scale-95">
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-35 flex gap-1 bg-black/20 border border-white/10 backdrop-blur-md p-1 rounded-full shadow-xl scale-95">
                 <button
                   onClick={() => setSelectedSplitSide('left')}
                   className={`px-3 py-1.5 rounded-full text-[10px] font-sans font-medium transition-all ${
@@ -1048,7 +1437,7 @@ export default function App() {
           </div>
 
           {/* 💡 Ambient & Operation Gesture Hint - Placed safely OUTSIDE the viewport frame */}
-          <div className="mt-2.5 text-center pointer-events-none flex items-center gap-1.5 bg-[#1F1F24]/60 border border-white/5 py-1 px-3.5 rounded-full text-[9.5px] text-stone-300 font-sans font-medium tracking-wide">
+          <div className="mt-2.5 text-center pointer-events-none flex items-center gap-1.5 bg-black/15 border border-white/5 py-1 px-3.5 rounded-full text-[9.5px] text-stone-300 font-sans font-medium tracking-wide backdrop-blur-xs">
             <span className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse" />
             <span>
               {isZh 
@@ -1069,7 +1458,7 @@ export default function App() {
                 playSound('click');
                 setIsAiPanelExpanded(true);
               }}
-              className="w-full bg-[#16161a]/90 hover:bg-[#1c1c22]/95 border border-white/10 hover:border-indigo-500/35 px-3.5 py-2.5 rounded-2xl shadow-lg backdrop-blur-md flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-99 group animate-fade-in"
+              className="w-full bg-black/20 hover:bg-black/30 border border-white/10 hover:border-indigo-500/35 px-3.5 py-2 rounded-2xl shadow-md backdrop-blur-md flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-99 group animate-fade-in"
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className="flex-shrink-0 relative flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 group-hover:scale-105 transition-transform">
@@ -1114,7 +1503,7 @@ export default function App() {
             </div>
           ) : (
             /* 🎨 EXPANDED HIGH-FIDELITY ANALYTICAL DASHBOARD */
-            <div className="w-full bg-[#16161a]/95 border border-white/10 rounded-2xl p-3 shadow-2xl backdrop-blur-md flex flex-col gap-3">
+            <div className="w-full bg-black/35 border border-white/10 rounded-2xl p-3 shadow-xl backdrop-blur-lg flex flex-col gap-2.5">
               
               {/* Header: Title + Auto Apply Toggle */}
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -1164,30 +1553,87 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Row 1: Real-time Multi-Sensor Radar Analyzer Diagnostics */}
-              <div className="flex flex-wrap gap-1">
-                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-white/70 font-sans tracking-tight">
-                  🌍 {recommendedInfo.detectedPlace}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-white/70 font-sans tracking-tight">
-                  🌌 {recommendedInfo.detectedTime}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-white/70 font-sans tracking-tight">
-                  🔆 {recommendedInfo.detectedBright}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-white/70 font-sans tracking-tight">
-                  🌡️ {recommendedInfo.detectedWarm}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-[#A6B5FF] font-sans tracking-tight font-medium">
-                  👤 {recommendedInfo.detectedSkin}
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-amber-200/90 font-sans tracking-tight font-medium">
-                  🎨 {recommendedInfo.detectedBg}
-                </span>
+              {/* Row 1: Real-time Multi-Dimensional AI Aesthetic Radar */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left mt-0.5">
+                {/* Column 1: Portrait Dimensions */}
+                <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-white/[0.03] border border-white/5 backdrop-blur-sm">
+                  <div className="flex items-center gap-1.5 border-b border-white/5 pb-1">
+                    <span className="text-indigo-300 text-[10px]">👤</span>
+                    <span className="text-[9.5px] font-semibold text-white/95 uppercase tracking-wider">{isZh ? '人像特征诊断' : 'Portrait Metrics'}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 text-[9px] text-white/70">
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '肤色温感' : 'Skin Temperature'}</span>
+                      <span className="font-medium text-[#A6B5FF] truncate max-w-[130px]">{isZh ? recommendedInfo.portraitSkinTempZh : recommendedInfo.portraitSkinTempEn}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '面部照度' : 'Face Brightness'}</span>
+                      <span className="font-medium text-[#A6B5FF] truncate max-w-[130px]">{isZh ? recommendedInfo.portraitBrightnessZh : recommendedInfo.portraitBrightnessEn}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '下颌阴影' : 'Contour Shadows'}</span>
+                      <span className="font-medium text-[#A6B5FF] truncate max-w-[130px]">{isZh ? recommendedInfo.portraitShadowsZh : recommendedInfo.portraitShadowsEn}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded border-l border-amber-500/35">
+                      <span className="text-white/45">{isZh ? '疲劳暗沉' : 'Skin Fatigue'}</span>
+                      <span className="font-medium text-amber-300 truncate max-w-[130px]">{isZh ? recommendedInfo.portraitDullnessZh : recommendedInfo.portraitDullnessEn}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '自定妆容' : 'Selfie Makeup'}</span>
+                      <span className="font-medium text-[#A6B5FF] truncate max-w-[130px]">{isZh ? recommendedInfo.portraitMakeupZh : recommendedInfo.portraitMakeupEn}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '五官立体' : 'Facial 3D'}</span>
+                      <span className="font-medium text-[#A6B5FF] truncate max-w-[130px]">{isZh ? recommendedInfo.portrait3DZh : recommendedInfo.portrait3DEn}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '黑眼圈重影' : 'Under-eye Shading'}</span>
+                      <span className="font-medium text-[#A6B5FF] truncate max-w-[130px]">{isZh ? recommendedInfo.portraitEyeShadowZh : recommendedInfo.portraitEyeShadowEn}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Column 2: Ambient / Background Dimensions */}
+                <div className="flex flex-col gap-1.5 p-2 rounded-xl bg-white/[0.03] border border-white/5 backdrop-blur-sm">
+                  <div className="flex items-center gap-1.5 border-b border-white/5 pb-1">
+                    <span className="text-indigo-300 text-[10px]">🌍</span>
+                    <span className="text-[9.5px] font-semibold text-white/95 uppercase tracking-wider">{isZh ? '背景特征维度' : 'Spatial Backdrop'}</span>
+                  </div>
+                  <div className="flex flex-col gap-1 text-[9px] text-white/70">
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '暖黄顶灯' : 'Warm Spotlight'}</span>
+                      <span className="font-medium text-indigo-200 truncate max-w-[130px]">{isZh ? recommendedInfo.bgLampZh : recommendedInfo.bgLampEn}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '白墙反射' : 'Wall Reflection'}</span>
+                      <span className="font-medium text-indigo-200 truncate max-w-[130px]">{isZh ? recommendedInfo.bgWallZh : recommendedInfo.bgWallEn}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '夜景暗区' : 'Nocturnal Background'}</span>
+                      <span className="font-medium text-indigo-200 truncate max-w-[130px]">{isZh ? recommendedInfo.bgNightZh : recommendedInfo.bgNightEn}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '环境场所' : 'Location Zone'}</span>
+                      <span className="font-medium text-indigo-400 truncate max-w-[130px]">{recommendedInfo.detectedPlace}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '时间安排' : 'Time Dimension'}</span>
+                      <span className="font-medium text-indigo-400 truncate max-w-[130px]">{recommendedInfo.detectedTime}</span>
+                    </div>
+                    <div className="flex justify-between items-center px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '总体照度' : 'Illumination'}</span>
+                      <span className="font-medium text-indigo-400 truncate max-w-[130px]">{recommendedInfo.detectedBright}</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-1.5 bg-black/10 px-1.5 py-0.5 rounded">
+                      <span className="text-white/45">{isZh ? '色温区间' : 'Color Temp'}</span>
+                      <span className="font-medium text-indigo-400 truncate max-w-[130px]">{isZh ? recommendedInfo.bgTempZh : recommendedInfo.bgTempEn}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Row 2: Aesthetic Preference Segment (My custom style mode) */}
-              <div className="flex flex-col gap-1 text-left bg-white/5 rounded-xl p-2 border border-white/5">
+              <div className="flex flex-col gap-1 text-left bg-black/10 rounded-xl p-2 border border-white/5">
                 <span className="text-[10px] text-white/50 font-sans font-medium tracking-wide flex justify-between">
                   <span>🎨 {isZh ? '自拍美学倾向' : 'Selfie Taste Style'}</span>
                   <span className="text-[9px] text-indigo-300">{isZh ? '直接调校分析规则' : 'Alters tuning algorithm'}</span>
@@ -1236,18 +1682,34 @@ export default function App() {
               </div>
 
               {/* Row 3: Conversational Prompt Advice Bubble + Big action button */}
-              <div className="bg-[#1c1c24] rounded-xl p-2.5 border border-indigo-500/10 flex flex-col gap-1.5 relative overflow-hidden">
+              <div className="bg-black/25 rounded-xl p-2.5 border border-indigo-500/10 flex flex-col gap-1.5 relative overflow-hidden text-left">
                 <div className="absolute right-2 top-2 bg-indigo-500/5 text-[30px] leading-none select-none text-indigo-400 pointer-events-none opacity-20">
                   ✍️
                 </div>
+
+                {/* ⚡ REAL-TIME STEP-BY-STEP PROCESS DIAGNOSTIC LOGS */}
+                <div className="flex flex-col gap-1 border-b border-white/5 pb-2 mb-1.5">
+                  <span className="text-[8.5px] font-mono tracking-widest text-[#A6B5FF]/70 uppercase font-bold flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
+                    Lumi AI Real-time Cognitive Diagnostics · 氛围美学追光过程诊断
+                  </span>
+                  <div className="flex flex-col gap-1 mt-1">
+                    {(recommendedInfo.stepsZh || []).map((step, idx) => (
+                      <div key={idx} className="flex gap-1.5 items-start text-[10.5px] text-stone-200/90 leading-tight animate-fade-in" style={{ animationDelay: `${idx * 120}ms` }}>
+                        <span className="text-indigo-400 font-extrabold select-none">•</span>
+                        <span>{isZh ? step : (recommendedInfo.stepsEn?.[idx] || step)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 
-                <div className="flex gap-2 items-start text-left">
+                <div className="flex gap-2 items-start pt-1">
                   <span className="text-xs select-none pt-0.5">🤖</span>
                   <div className="flex-1 flex flex-col min-w-0">
-                    <p className="text-[10.5px] text-white/95 font-medium leading-relaxed font-sans">
+                    <p className="text-[10.5px] text-emerald-200/95 font-medium leading-relaxed font-sans bg-emerald-500/5 border-l-2 border-emerald-400/40 pl-2 rounded-r py-1">
                       {isZh ? recommendedInfo.adviceZh : recommendedInfo.adviceEn}
                     </p>
-                    <p className="text-[9.5px] text-[#A6B5FF] font-sans font-semibold tracking-wide mt-1">
+                    <p className="text-[9.5px] text-[#A6B5FF] font-sans font-semibold tracking-wide mt-1.5">
                       {recommendedInfo.memoryEffect}
                     </p>
                   </div>
@@ -1264,7 +1726,7 @@ export default function App() {
                         : `✨ Synchronized AI recommended 「${recommendedPreset.englishName}」!`
                       );
                     }}
-                    className="w-full mt-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-[10px] text-white font-sans font-bold tracking-wider cursor-pointer shadow-md transition-all active:scale-98"
+                    className="w-full mt-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-[10px] text-white font-sans font-bold tracking-wider cursor-pointer shadow-md transition-all active:scale-98"
                   >
                     💡 一键应用 AI 补光配方 ({isZh ? recommendedPreset.name : recommendedPreset.englishName})
                   </button>
@@ -1341,7 +1803,7 @@ export default function App() {
 
         {/* Viewfinder Size Switcher (Gives back maximum screen glow) */}
         <div className="w-full flex justify-center mb-1 mt-1 z-20">
-          <div className="flex items-center gap-0.5 bg-black/60 border border-white/10 backdrop-blur-md p-1 rounded-full shadow-lg text-white">
+          <div className="flex items-center gap-0.5 bg-black/20 border border-white/10 backdrop-blur-md p-0.5 rounded-full shadow-md text-white">
             <button
               onClick={() => {
                 playSound('click');
@@ -1353,7 +1815,7 @@ export default function App() {
                   : 'text-neutral-300 hover:text-white'
               }`}
             >
-              📐 {isZh ? '全幅预览' : 'Full Frame'}
+              {isZh ? '全幅预览' : 'Full Frame'}
             </button>
             <button
               onClick={() => {
@@ -1366,7 +1828,7 @@ export default function App() {
                   : 'text-neutral-300 hover:text-white'
               }`}
             >
-              🔆 {isZh ? '高亮悬浮' : 'High Light'}
+              {isZh ? '高亮悬浮' : 'High Light'}
             </button>
             <button
               onClick={() => {
@@ -1379,15 +1841,15 @@ export default function App() {
                   : 'text-neutral-300 hover:text-white'
               }`}
             >
-              🔮 {isZh ? '环形柔光' : 'Halo'}
+              {isZh ? '环形柔光' : 'Halo'}
             </button>
           </div>
         </div>
 
         {/* BOTTOM CONTROLS & COLOR SWATCHES */}
-        <div className="w-full flex flex-col gap-4 mt-1">
+        <div className="w-full flex flex-col gap-1.5 mt-1">
           
-          <div className="bg-black/60 backdrop-blur-md rounded-[32px] p-2 border border-white/10 shadow-xl">
+          <div className="bg-black/25 backdrop-blur-md rounded-[20px] p-0.5 border border-white/10 shadow-lg">
             <PresetSelector
               presets={FILL_LIGHT_PRESETS}
               activePreset={activePreset}
@@ -1397,6 +1859,12 @@ export default function App() {
               splitPresetRight={splitPresetRight}
               onSelectSplitSide={handleSplitPresetSelect}
               selectedSplitSide={selectedSplitSide}
+              isZh={isZh}
+              intensityLevel={intensityLevel}
+              onIntensityChange={(lvl) => {
+                playSound('focus');
+                setIntensityLevel(lvl);
+              }}
             />
           </div>
 
@@ -1411,7 +1879,7 @@ export default function App() {
                 }
                 setShowPhotoViewer(true);
               }}
-              className="w-12 h-12 rounded-full bg-black/60 hover:bg-black/75 border border-white/10 flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 relative shadow-xl backdrop-blur-md"
+              className="w-12 h-12 rounded-full bg-black/20 hover:bg-black/35 border border-white/10 flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 relative shadow-md backdrop-blur-md"
             >
               {capturedPhotos.length > 0 ? (
                 <div className="w-full h-full relative group">
@@ -1444,7 +1912,7 @@ export default function App() {
                 playSound('focus');
                 setPhysicalGlowActive(true);
               }}
-              className="w-12 h-12 rounded-full bg-black/60 hover:bg-black/75 text-white border border-white/10 flex items-center justify-center cursor-pointer transition-all duration-300 shadow-xl backdrop-blur-md"
+              className="w-12 h-12 rounded-full bg-black/20 hover:bg-black/35 text-white border border-white/10 flex items-center justify-center cursor-pointer transition-all duration-300 shadow-md backdrop-blur-md"
               title="Full screen Glow tool"
             >
               <Maximize2 className="w-4.5 h-4.5 text-white animate-pulse" />
@@ -1493,8 +1961,16 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Snapshot image with active filters applied */}
-              <div className="relative w-full aspect-[3/4] bg-neutral-950 rounded-[40px] overflow-hidden border border-white/20 shadow-2xl">
+              {/* Snapshot image with active filters applied - matches original viewfinder ratio and shape */}
+              <div 
+                className={`relative mx-auto bg-neutral-950 overflow-hidden border border-white/20 shadow-2xl transition-all duration-300 ${
+                  photoToRender?.viewfinderSize === 'circle' 
+                    ? 'w-[75%] aspect-square rounded-full' 
+                    : photoToRender?.viewfinderSize === 'compact'
+                    ? 'w-[82%] aspect-[3/4] rounded-[32px]'
+                    : 'w-full aspect-[3/4] rounded-[40px]'
+                }`}
+              >
                 <img
                   src={photoToRender?.photoUrl || "/src/assets/images/portrait_simulate_1779326784414.png"}
                   alt="Captured Portrait"
@@ -1603,7 +2079,13 @@ export default function App() {
                       playSound('click');
                       setActiveViewPhoto(photo);
                     }}
-                    className={`w-12 h-16 rounded-xl overflow-hidden border cursor-pointer flex-shrink-0 relative transition-all ${
+                    className={`overflow-hidden border cursor-pointer flex-shrink-0 relative transition-all ${
+                      photo.viewfinderSize === 'circle'
+                        ? 'w-12 h-12 rounded-full'
+                        : photo.viewfinderSize === 'compact'
+                        ? 'w-10 h-13.5 rounded-xl'
+                        : 'w-12 h-16 rounded-xl'
+                    } ${
                       photoToRender?.id === photo.id
                         ? 'border-white ring-2 ring-white/60 scale-105'
                         : 'border-white/20 opacity-70 hover:opacity-100'
@@ -1615,7 +2097,7 @@ export default function App() {
                       className="w-full h-full object-cover"
                     />
 
-                    <span className="absolute bottom-0 text-center w-full text-white bg-black/60 text-[8px] font-mono py-0.5">
+                    <span className={`absolute bottom-0 text-center w-full text-white bg-black/60 text-[8px] font-mono py-0.5 ${photo.viewfinderSize === 'circle' ? 'hidden' : ''}`}>
                       #{capturedPhotos.length - index}
                     </span>
                   </div>

@@ -16,6 +16,7 @@ export interface FillLightPreset {
   accentColor: string;
   vibeQuote: string;
   cameraFilterClass: string; // simulated filter look
+  category?: 'classic' | 'ambient' | 'studio';
 }
 
 export interface AnalyticsEvent {
@@ -48,4 +49,6 @@ export interface CapturedPhoto {
   softness: number;
   cameraFilterClass?: string;
   photoUrl?: string;
+  viewfinderSize?: 'standard' | 'compact' | 'circle';
+  intensityLevel?: 'soft' | 'normal' | 'rich' | 'studio';
 }

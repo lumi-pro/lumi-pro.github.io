@@ -25,6 +25,8 @@ interface CameraViewProps {
   onSimulatedPortraitToggle: (val: boolean) => void;
   isPip?: boolean;
   language?: string;
+  onAmbientDetected?: (stats: { brightness: number; warmth: number }) => void;
+  simulatedScenario?: string;
 }
 
 export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraViewProps>(({
@@ -42,6 +44,8 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
   onSimulatedPortraitToggle,
   isPip = false,
   language = 'zh',
+  onAmbientDetected,
+  simulatedScenario = 'none',
 }, ref) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -202,6 +206,62 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
     }
   }, [stream, cameraState]);
 
+  // Real-time canvas frame analysis for environment detection (Brightness and warmth/RGB ratio)
+  useEffect(() => {
+    if (useSimulatedPortrait || cameraState !== 'active' || !videoRef.current || !onAmbientDetected) {
+      return;
+    }
+
+    let active = true;
+    const analyzeCanvas = document.createElement('canvas');
+    analyzeCanvas.width = 16;
+    analyzeCanvas.height = 16;
+    const analyzeCtx = analyzeCanvas.getContext('2d');
+
+    const interval = setInterval(() => {
+      if (!active || !videoRef.current || useSimulatedPortrait) return;
+      try {
+        const video = videoRef.current;
+        if (video.videoWidth === 0 || video.videoHeight === 0) return;
+        
+        analyzeCtx?.drawImage(video, 0, 0, 16, 16);
+        const imgData = analyzeCtx?.getImageData(0, 0, 16, 16);
+        if (!imgData) return;
+
+        let totalR = 0;
+        let totalG = 0;
+        let totalB = 0;
+        const len = imgData.data.length;
+
+        for (let i = 0; i < len; i += 4) {
+          totalR += imgData.data[i];
+          totalG += imgData.data[i+1];
+          totalB += imgData.data[i+2];
+        }
+
+        const count = len / 4;
+        const avgR = totalR / count;
+        const avgG = totalG / count;
+        const avgB = totalB / count;
+
+        const luma = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+        const ratio = avgR / (avgB + 1);
+
+        onAmbientDetected({
+          brightness: Math.round(luma),
+          warmth: parseFloat(ratio.toFixed(2)),
+        });
+      } catch (err) {
+        console.warn('Silent analyzer frame skip:', err);
+      }
+    }, 2000);
+
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [cameraState, useSimulatedPortrait, stream, onAmbientDetected]);
+
   // Handle gesture controls for brightness & softness (which operates the fill light mechanics)
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (containerRef.current) {
@@ -321,6 +381,32 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
       className="relative w-full h-full bg-transparent overflow-hidden select-none cursor-move"
       id="selfie-camera-viewport"
     >
+      {/* Visual Environment Simulator Overlay */}
+      {simulatedScenario && simulatedScenario !== 'none' && (
+        <div 
+          className="absolute inset-0 pointer-events-none z-20 transition-all duration-700 animate-fade-in"
+          style={{
+            background: 
+              simulatedScenario === 'dark_warm' ? 'rgba(217, 119, 6, 0.16)' :
+              simulatedScenario === 'warm_restaurant' ? 'rgba(251, 146, 60, 0.1)' :
+              simulatedScenario === 'night_cool' ? 'rgba(30, 58, 138, 0.2)' :
+              simulatedScenario === 'dull' ? 'rgba(100, 116, 139, 0.12)' :
+              simulatedScenario === 'daylight_bright' ? 'rgba(56, 189, 248, 0.04)' : 'transparent',
+            backdropFilter:
+              simulatedScenario === 'dark_warm' ? 'brightness(0.72) sepia(0.25) saturate(1.15) contrast(1.05)' :
+              simulatedScenario === 'warm_restaurant' ? 'brightness(0.95) sepia(0.12) saturate(1.1) contrast(1.0)' :
+              simulatedScenario === 'night_cool' ? 'brightness(0.68) saturate(0.85) hue-rotate-[10deg]' :
+              simulatedScenario === 'dull' ? 'brightness(0.88) saturate(0.78) contrast(1.01)' :
+              simulatedScenario === 'daylight_bright' ? 'brightness(1.18) saturate(1.05) contrast(1.03)' : 'none',
+            WebkitBackdropFilter: 
+              simulatedScenario === 'dark_warm' ? 'brightness(0.72) sepia(0.25) saturate(1.15) contrast(1.05)' :
+              simulatedScenario === 'warm_restaurant' ? 'brightness(0.95) sepia(0.12) saturate(1.1) contrast(1.0)' :
+              simulatedScenario === 'night_cool' ? 'brightness(0.68) saturate(0.85) hue-rotate-[10deg]' :
+              simulatedScenario === 'dull' ? 'brightness(0.88) saturate(0.78) contrast(1.01)' :
+              simulatedScenario === 'daylight_bright' ? 'brightness(1.18) saturate(1.05) contrast(1.03)' : 'none',
+          }}
+        />
+      )}
       
       {/* Core Live Stream View / Sim */}
       {cameraState === 'active' && !useSimulatedPortrait ? (
@@ -469,18 +555,7 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
         </div>
       )}
 
-      {/* 2. Floating instruction watermark hints (Separated left and right to prevent blocking the face) */}
-      <div className="absolute bottom-4 left-4 right-4 z-30 flex justify-between items-center pointer-events-none gap-2">
-        <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/10 backdrop-blur-md text-[9.5px] text-[#2D2D2D] font-sans font-medium tracking-wide shadow-sm flex items-center gap-1">
-          {language === 'zh' ? '↕ 补发光亮度' : '↕ Light Intensity'}
-        </span>
-        <span className="px-3 py-1.5 rounded-full bg-white/20 border border-white/10 backdrop-blur-md text-[9.5px] text-[#2D2D2D] font-sans font-medium tracking-wide shadow-sm flex items-center gap-1">
-          {splitMode !== 'none' 
-            ? (language === 'zh' ? '↔ 左右温区混配' : '↔ Split Zone Mix')
-            : (language === 'zh' ? '↔ 智能温润柔和' : '↔ Soft Skin Style')
-          }
-        </span>
-      </div>
+
 
     </div>
   );

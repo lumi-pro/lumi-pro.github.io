@@ -29,6 +29,76 @@ import {
   Trash2
 } from 'lucide-react';
 
+interface AmbientScenario {
+  id: string;
+  name: string;
+  englishName: string;
+  icon: string;
+  brightness: number;
+  warmth: number;
+  recommendedPresetId: string;
+  adviceZh: string;
+  adviceEn: string;
+}
+
+const AMB_SCENARIOS: AmbientScenario[] = [
+  {
+    id: 'dull',
+    name: '面部暗沉',
+    englishName: 'Dull Skin',
+    icon: '👤',
+    brightness: 110,
+    warmth: 1.0,
+    recommendedPresetId: 'cream',
+    adviceZh: '面部略显疲惫，建议开启「奶油肌」饱满补光',
+    adviceEn: 'Dull tone detected. Try "Cream Skin" to bright up',
+  },
+  {
+    id: 'dark_warm',
+    name: '暗黄低光',
+    englishName: 'Dark Warm',
+    icon: '🌙',
+    brightness: 60,
+    warmth: 1.45,
+    recommendedPresetId: 'cold',
+    adviceZh: '光影昏暗偏黄，建议一键应用「冷白皮」去黄提亮',
+    adviceEn: 'Dim & yellow context. Suggest cool "Ice White" light',
+  },
+  {
+    id: 'warm_restaurant',
+    name: '暖色餐厅',
+    englishName: 'Warm Light',
+    icon: '🍷',
+    brightness: 120,
+    warmth: 1.55,
+    recommendedPresetId: 'sunset',
+    adviceZh: '温馨室温烘托，合衬点亮「日落橘」暖夕阳微光',
+    adviceEn: 'Warm surrounding ambiance. Try "Sunset Glow" style',
+  },
+  {
+    id: 'night_cool',
+    name: '夜晚冷调',
+    englishName: 'Night Cool',
+    icon: '🌌',
+    brightness: 45,
+    warmth: 0.75,
+    recommendedPresetId: 'moonlight',
+    adviceZh: '夜色冰亮幽暗，建议开启「月光蓝」打造通透眼神光',
+    adviceEn: 'Night cold scene. Match with icy "Moonlight" light',
+  },
+  {
+    id: 'daylight_bright',
+    name: '户外日光',
+    englishName: 'Daylight',
+    icon: '☀️',
+    brightness: 200,
+    warmth: 0.95,
+    recommendedPresetId: 'love',
+    adviceZh: '户外光照充盈，推荐使用「初恋粉」红润通透气色',
+    adviceEn: 'Bright daylight. Match with rosy "First Love" skin',
+  }
+];
+
 export default function App() {
   // Primary States
   const [activePreset, setActivePreset] = useState<FillLightPreset>(FILL_LIGHT_PRESETS[0]);
@@ -39,6 +109,13 @@ export default function App() {
 
   const [brightness, setBrightness] = useState<number>(0.85); // 15% to 100%
   const [softness, setSoftness] = useState<number>(0.65); // Color saturation/dilution
+
+  // AI Ambient Light Recommendation Engine States
+  const [ambientStats, setAmbientStats] = useState<{ brightness: number; warmth: number }>({
+    brightness: 110,
+    warmth: 1.0,
+  });
+  const [simulatedScenario, setSimulatedScenario] = useState<string>('none');
 
   // Simulated Hardware & Settings States
   const [settings, setSettings] = useState<AppSettings>({
@@ -195,6 +272,86 @@ export default function App() {
       analyticsTracker.track('duration_ping', { stayTimeSec: sessionTime });
     }
   }, [sessionTime]);
+
+  const getRecommendation = (bright: number, warm: number) => {
+    // If we have a manually selected simulatedScenario, let's override with that scenario's advice
+    if (simulatedScenario && simulatedScenario !== 'none') {
+      const found = AMB_SCENARIOS.find(s => s.id === simulatedScenario);
+      if (found) {
+        return {
+          presetId: found.recommendedPresetId,
+          adviceZh: found.adviceZh,
+          adviceEn: found.adviceEn,
+          labelZh: found.name,
+          labelEn: found.englishName,
+        };
+      }
+    }
+
+    // Otherwise, translate dynamic readings from camera scanner
+    if (bright < 85 && warm > 1.25) {
+      return {
+        presetId: 'cold',
+        adviceZh: '当前光影昏暗偏黄，推荐去黄提亮冷光「冷白皮」',
+        adviceEn: 'Dim & yellow ambient detected, try "Ice White" preset',
+        labelZh: '暗黄低光',
+        labelEn: 'Dark Warm Light',
+      };
+    }
+    if (bright < 95 && warm < 0.88) {
+      return {
+        presetId: 'moonlight',
+        adviceZh: '处于夜晚冷色低光，推荐引入清冷幽蓝「月光蓝」',
+        adviceEn: 'Night cold ambient detected, try "Moonlight" preset',
+        labelZh: '夜晚冷光',
+        labelEn: 'Night Cool',
+      };
+    }
+    if (warm > 1.32) {
+      return {
+        presetId: 'sunset',
+        adviceZh: '周围笼罩温馨暖调，合衬推荐复古胶片「日落橘」',
+        adviceEn: 'Warm indoor surrounding atmosphere, try "Sunset Glow"',
+        labelZh: '温馨暖光',
+        labelEn: 'Warm Ambient',
+      };
+    }
+    if (bright > 165) {
+      return {
+        presetId: 'love',
+        adviceZh: '环境日光饱满清莹，推荐点缀少女气质「初恋粉」',
+        adviceEn: 'Bright day light environment, try "First Love" preset',
+        labelZh: '户外光照',
+        labelEn: 'Bright Daylight',
+      };
+    }
+    return {
+      presetId: 'cream',
+      adviceZh: '面部略显疲惫暗沉，建议润色磨皮首选「奶油肌」',
+      adviceEn: 'Skin tone looks slightly dull. Try "Cream Skin" to warm up',
+      labelZh: '面容微暗',
+      labelEn: 'Slightly Dull',
+    };
+  };
+
+  const recommendedInfo = getRecommendation(ambientStats.brightness, ambientStats.warmth);
+  const recommendedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendedInfo.presetId) || FILL_LIGHT_PRESETS[0];
+
+  const handleApplyAiRecommendation = () => {
+    playSound('focus'); // play mechanical cinematic dual-tone sound for magical feeling
+    setActivePreset(recommendedPreset);
+    analyticsTracker.track('ai_apply_recommendation', {
+      ambientScenario: simulatedScenario,
+      bright: ambientStats.brightness,
+      warmth: ambientStats.warmth,
+      presetId: recommendedPreset.id,
+      presetName: recommendedPreset.name,
+    });
+    showToast(isZh 
+      ? `✨ Lumi 智能补光：已为你定制并极速匹配「${recommendedPreset.name}」顶尖方案！` 
+      : `✨ Lumi AI: Instantly customized & applied 「${recommendedPreset.englishName}」!`
+    );
+  };
 
   const handlePresetSelect = (preset: FillLightPreset) => {
     playSound('click');
@@ -551,6 +708,9 @@ export default function App() {
                 useSimulatedPortrait={useSimulatedPortrait}
                 onSimulatedPortraitToggle={handleToggleSimulatedCamera}
                 isPip={true}
+                language={settings.language}
+                onAmbientDetected={setAmbientStats}
+                simulatedScenario={simulatedScenario}
               />
             </div>
           </div>
@@ -637,7 +797,62 @@ export default function App() {
         </div>
 
         {/* Cinematic Viewfinder (Mirrors physical screen) */}
-        <div className="flex-1 w-full flex flex-col items-center justify-center overflow-hidden py-2 min-h-[35vh]">
+        <div className="flex-1 w-full flex flex-col items-center justify-center overflow-hidden py-1 min-h-[35vh]">
+          {/* ✨ Lumi AI Smart Ambient Recommendation Floating Badge (Repositioned completely outside the viewfinder container so it never blocks the preview lens!) */}
+          {settings.language && (
+            <div className="w-[94%] max-w-[340px] z-35 mb-2.5 transition-all duration-300">
+              <div 
+                className="bg-black/85 hover:bg-black/90 backdrop-blur-xl border border-white/15 px-3 py-2 rounded-2xl shadow-xl flex items-center justify-between gap-2 transition-all text-white"
+                style={{
+                  boxShadow: activePreset.id === recommendedPreset.id 
+                    ? `0 12px 30px -5px rgba(0,0,0,0.6), 0 0 14px 2px ${recommendedPreset.color}45` 
+                    : `0 12px 30px -5px rgba(0,0,0,0.6)`
+                }}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex-shrink-0 relative flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300">
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                    {activePreset.id !== recommendedPreset.id && (
+                      <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75 animate-duration-1000"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-pink-500"></span>
+                      </span>
+                    )}
+                  </span>
+                  <div className="flex flex-col text-left min-w-0">
+                    <p className="text-[10px] text-white/50 font-sans tracking-tight truncate flex items-center gap-1">
+                      <span className="font-semibold text-white/70">Lumi AI {isZh ? '光感极速配' : 'Lighting AI'}</span>
+                      <span className="opacity-40">•</span>
+                      <span className="text-[9px] text-[#A6B5FF] font-medium">
+                        {isZh ? recommendedInfo.labelZh : recommendedInfo.labelEn}
+                      </span>
+                    </p>
+                    <p className="text-[10.5px] text-white/95 font-medium leading-tight truncate">
+                      {isZh ? recommendedInfo.adviceZh : recommendedInfo.adviceEn}
+                    </p>
+                  </div>
+                </div>
+
+                {activePreset.id === recommendedPreset.id ? (
+                  <div className="flex-shrink-0 flex items-center gap-1 px-1.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-[9.5px] text-emerald-300 font-medium whitespace-nowrap">
+                    <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>{isZh ? '已最称心' : 'Matched'}</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleApplyAiRecommendation();
+                    }}
+                    className="flex-shrink-0 px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/20 text-[9.5px] text-white font-sans font-bold shadow-md cursor-pointer transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
+                  >
+                    💡 {isZh ? '一键补光' : 'Apply'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           <div 
             className={`overflow-hidden relative transition-all duration-500 ease-out border-4 border-white/85 bg-stone-950
               ${viewfinderSize === 'standard' ? 'w-full aspect-[3/4] max-h-[46vh] rounded-[36px]' : ''}
@@ -663,6 +878,8 @@ export default function App() {
               useSimulatedPortrait={useSimulatedPortrait}
               onSimulatedPortraitToggle={handleToggleSimulatedCamera}
               language={settings.language}
+              onAmbientDetected={setAmbientStats}
+              simulatedScenario={simulatedScenario}
             />
 
             {/* Split controls overlay */}
@@ -686,11 +903,77 @@ export default function App() {
                 </button>
               </div>
             )}
-            
-            <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none opacity-45 text-[9px] font-sans tracking-widest text-white/80 uppercase">
-              {isZh ? '⇅ 上下滑动曝光 · ⇄ 左右滑动肤色' : '⇅ swipe brightness · ⇄ swipe softness'}
+          </div>
+
+          {/* 💡 Ambient & Operation Gesture Hint - Placed safely OUTSIDE the viewport frame */}
+          <div className="mt-2.5 text-center pointer-events-none flex items-center gap-1.5 bg-[#1F1F24]/60 border border-white/5 py-1 px-3.5 rounded-full text-[9.5px] text-stone-300 font-sans font-medium tracking-wide">
+            <span className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse" />
+            <span>
+              {isZh 
+                ? '上下滑动调节补发光亮度 ｜ 左右滑动调节温润肤色' 
+                : 'Swipe vertically for light level | Horizontally for warm-softness'}
+            </span>
+          </div>
+        </div>
+
+        {/* AI Atmosphere Simulation Selector Capsule */}
+        <div className="w-full flex flex-col items-center mb-1 px-1 z-20">
+          <div className="w-full flex items-center justify-between px-3 py-1.5 bg-black/45 rounded-2xl border border-white/5 shadow-inner mb-1 text-white/75">
+            <span className="text-[10px] font-sans tracking-wide flex items-center gap-1 animate-pulse">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="font-semibold text-white/90">{isZh ? 'Lumi AI 智能环境传感器' : 'Lumi AI Atmosphere Radar'}</span>
+            </span>
+            <div className="flex gap-1.5 items-center">
+              <button 
+                onClick={() => {
+                  playSound('click');
+                  setSimulatedScenario(simulatedScenario === 'none' ? 'dull' : 'none');
+                }}
+                className={`px-2 py-0.5 rounded-lg text-[9px] font-sans tracking-wide border transition-all cursor-pointer ${
+                  simulatedScenario !== 'none'
+                    ? 'bg-indigo-600/30 border-indigo-500 text-indigo-200 font-bold'
+                    : 'bg-white/5 border-white/10 text-white/50 hover:text-white'
+                }`}
+              >
+                {simulatedScenario !== 'none' ? (isZh ? '仿真调试中' : 'Simulating') : (isZh ? '环境仿真' : 'Simulate')}
+              </button>
             </div>
           </div>
+
+          {simulatedScenario !== 'none' && (
+            <div className="w-full flex gap-1.5 py-1.5 px-1.5 overflow-x-auto scrollbar-none snap-x justify-start bg-black/60 border border-white/10 rounded-2xl backdrop-blur-md shadow-lg duration-300">
+              {AMB_SCENARIOS.map((scen) => (
+                <button
+                  key={scen.id}
+                  onClick={() => {
+                    playSound('click');
+                    setSimulatedScenario(scen.id);
+                    setAmbientStats({ brightness: scen.brightness, warmth: scen.warmth });
+                  }}
+                  className={`flex-shrink-0 snap-center min-w-[76px] px-2 py-1.5 rounded-xl text-[10px] font-sans flex flex-col items-center gap-0.5 border cursor-pointer transition-all duration-200 ${
+                    simulatedScenario === scen.id
+                      ? 'bg-white text-neutral-900 border-white font-bold transform scale-102 shadow-md'
+                      : 'bg-white/5 text-white/75 border-white/5 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span className="text-sm leading-none">{scen.icon}</span>
+                  <span className="tracking-tight font-medium text-[9.5px]">{isZh ? scen.name : scen.englishName}</span>
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  playSound('click');
+                  setSimulatedScenario('none');
+                  // Reset stats to normal defaults
+                  setAmbientStats({ brightness: 110, warmth: 1.0 });
+                }}
+                className="flex-shrink-0 snap-center min-w-[70px] px-2 py-1.5 rounded-xl text-[10px] font-sans flex flex-col items-center gap-0.5 bg-red-500/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 cursor-pointer transition-all"
+              >
+                <span className="text-sm leading-none">🔄</span>
+                <span className="tracking-tight font-medium text-[9.5px]">{isZh ? '相机自适应' : 'Auto Cam'}</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Viewfinder Size Switcher (Gives back maximum screen glow) */}

@@ -41,6 +41,16 @@ interface AmbientScenario {
   adviceEn: string;
 }
 
+interface UserPreferences {
+  favoritePresetId: string;
+  usageCounts: Record<string, number>;
+  averageBrightness: number;
+  averageSoftness: number;
+  nighttimePresetId: string;
+  autoApply: boolean; // Lumi Auto-Tune system! Default is true!
+  styleMode: 'natural' | 'glamorous' | 'cool_tech'; // user selfie preference style
+}
+
 const AMB_SCENARIOS: AmbientScenario[] = [
   {
     id: 'dull',
@@ -116,6 +126,46 @@ export default function App() {
     warmth: 1.0,
   });
   const [simulatedScenario, setSimulatedScenario] = useState<string>('none');
+  const [isAiPanelExpanded, setIsAiPanelExpanded] = useState<boolean>(false);
+
+  // AI Cognitive Personal preferences state
+  const [preferences, setPreferences] = useState<UserPreferences>(() => {
+    try {
+      const saved = localStorage.getItem('lumi_user_preferences');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          favoritePresetId: parsed.favoritePresetId || 'cream',
+          usageCounts: parsed.usageCounts || { cream: 3, love: 1, cold: 2 },
+          averageBrightness: parsed.averageBrightness ?? 0.85,
+          averageSoftness: parsed.averageSoftness ?? 0.65,
+          nighttimePresetId: parsed.nighttimePresetId || 'cold',
+          autoApply: parsed.autoApply ?? true,
+          styleMode: parsed.styleMode || 'natural',
+        };
+      }
+    } catch (e) {
+      console.error('Failed to load user preferences', e);
+    }
+    return {
+      favoritePresetId: 'cream',
+      usageCounts: { cream: 2, love: 1, cold: 1 },
+      averageBrightness: 0.85,
+      averageSoftness: 0.65,
+      nighttimePresetId: 'cold',
+      autoApply: true,
+      styleMode: 'natural',
+    };
+  });
+
+  // Keep preferences in persistent storage
+  useEffect(() => {
+    try {
+      localStorage.setItem('lumi_user_preferences', JSON.stringify(preferences));
+    } catch (e) {
+      console.error('Failed to save user preferences', e);
+    }
+  }, [preferences]);
 
   // Simulated Hardware & Settings States
   const [settings, setSettings] = useState<AppSettings>({
@@ -126,6 +176,8 @@ export default function App() {
     mirrorCamera: true,
     highQualityStream: true,
   });
+
+  const isZh = settings.language === 'zh';
 
   const [useSimulatedPortrait, setUseSimulatedPortrait] = useState<boolean>(false);
   const [currentView, setCurrentView] = useState<'camera' | 'settings' | 'analytics'>('camera');
@@ -274,68 +326,173 @@ export default function App() {
   }, [sessionTime]);
 
   const getRecommendation = (bright: number, warm: number) => {
-    // If we have a manually selected simulatedScenario, let's override with that scenario's advice
-    if (simulatedScenario && simulatedScenario !== 'none') {
-      const found = AMB_SCENARIOS.find(s => s.id === simulatedScenario);
-      if (found) {
-        return {
-          presetId: found.recommendedPresetId,
-          adviceZh: found.adviceZh,
-          adviceEn: found.adviceEn,
-          labelZh: found.name,
-          labelEn: found.englishName,
-        };
+    // 1. Analyze environment variables
+    const currentHour = new Date().getHours();
+    const isNight = currentHour >= 18 || currentHour < 6;
+    
+    // Day/Night
+    const detectedTime = isNight 
+      ? (isZh ? '深夜时分 🌌' : 'Late Night 🌌') 
+      : (isZh ? '日光时分 ☀️' : 'Daylight Hour ☀️');
+
+    // Indoor/Outdoor
+    const isOutdoor = bright > 165 || simulatedScenario === 'daylight_bright';
+    const detectedPlace = isOutdoor 
+      ? (isZh ? '室外日光充盈' : 'Bright Outdoor') 
+      : (isZh ? '舒适室内空间' : 'Cozy Indoor Studio');
+
+    // Environment Brightness
+    let detectedBright = isZh ? '环境昏暗' : 'Dim Ambient';
+    if (bright > 150) {
+      detectedBright = isZh ? '光照极亮' : 'Ultra Bright';
+    } else if (bright >= 85) {
+      detectedBright = isZh ? '光照柔和' : 'Soft Indoor Light';
+    }
+
+    // Warmth/Temperature
+    let detectedWarm = isZh ? '冷色蓝调/Cold temp' : 'Cool Blue Temp';
+    if (warm > 1.25) {
+      detectedWarm = isZh ? '暖黄色调/Warm temp' : 'Warm Orange/Yellow';
+    } else if (warm >= 0.88) {
+      detectedWarm = isZh ? '温和中性/Neutral temp' : 'Neutral Safe Temp';
+    }
+
+    // BG Color Estimation
+    let detectedBg = isZh ? '低饱和素雅灰' : 'Neutral Pastel Gray';
+    if (warm > 1.4) {
+      detectedBg = isZh ? '深橙香槟色背景' : 'Warm Champagne Hue';
+    } else if (warm > 1.20) {
+      detectedBg = isZh ? '温馨浅麦黄背景' : 'Soft Ambient Warm Gold';
+    } else if (warm < 0.85) {
+      detectedBg = isZh ? '幽蓝/深邃冷灰背景' : 'Icy Deep Cobalt Background';
+    }
+
+    // Face / Skin State prediction
+    let detectedSkin = isZh ? '肤色相对润泽' : 'Skin state hydrated';
+    if (simulatedScenario === 'dull') {
+      detectedSkin = isZh ? '因疲态略显暗沉' : 'Fatigued & Slightly Dull';
+    } else if (bright < 85 && warm > 1.2) {
+      detectedSkin = isZh ? '环境过暖脸部显黄' : 'Tone yellowed by warm light';
+    } else if (bright < 85 && warm < 0.9) {
+      detectedSkin = isZh ? '低光导致脸色无神' : 'Lacks glow & pale dark shadow';
+    } else if (bright > 165) {
+      detectedSkin = isZh ? '日光爆满，局部过曝' : 'Highly exposed under sunlight';
+    }
+
+    // 2. Base Recommendation Rules
+    let presetId = 'cream';
+    let baseAdviceZh = '';
+    let baseAdviceEn = '';
+    let labelZh = '';
+    let labelEn = '';
+
+    if (simulatedScenario === 'dull') {
+      presetId = 'cream';
+      baseAdviceZh = '检测到你面部轻微疲惫暗沉。已为你加开 15% 漫反射补光，推荐经典「奶油肌」，立现婴儿般饱满好气色！';
+      baseAdviceEn = 'Fatigue state detected. Recommended "Cream Skin" to instantly restore smooth & bounce look!';
+      labelZh = '疲劳调和';
+      labelEn = 'Fatigue Neutralizer';
+    } else if (bright < 85 && warm > 1.25) {
+      presetId = 'cold';
+      baseAdviceZh = '当前环境偏暖偏黄。Lumi 已经帮你准备好了冷调「冷白皮」补光，能完美中和暗黄、去黄提亮，皮肤一秒高级清透！';
+      baseAdviceEn = 'Surrounding light is too yellow. Applied cold "Ice White" filler to neutralize skin and pop high-fashion glow!';
+      labelZh = '去黄提亮';
+      labelEn = 'Warm Neutralizer';
+    } else if (bright < 95 && warm < 0.88) {
+      presetId = 'moonlight';
+      baseAdviceZh = '处于深夜冷调暗光。不建议调高刺眼亮光，已推荐微蓝色温「月光蓝」贴片，能在瞳孔中凝聚高雅通透的眼神光！';
+      baseAdviceEn = 'Deep night cold darkness. We avoided harsh glare and applied serene vibe "Moonlight" for precious eyes!';
+      labelZh = '瞳孔点亮';
+      labelEn = 'Deep Eyes Glitter';
+    } else if (warm > 1.32) {
+      presetId = 'sunset';
+      baseAdviceZh = '周围笼罩在温馨暖黄光圈下。何不顺应本真？已推荐偏粉橙调「日落橘」暖夕阳微光，打造极具情绪张力的胶片大片！';
+      baseAdviceEn = 'Warm environment detected. Try sunset-inspired retro "Sunset Glow" for storytelling cinematic look!';
+      labelZh = '日落情绪';
+      labelEn = 'Sunset Mood Art';
+    } else if (bright > 165) {
+      presetId = 'love';
+      baseAdviceZh = '户外光照非常饱满清亮。已推荐自带浪漫属性的「初恋粉」做辅色，不仅能防强光过曝，还能给脸庞透出少女红润！';
+      baseAdviceEn = 'Daylight is fully abundant. Recommended soft "First Love" backup to preserve highlight and insert pink blush!';
+      labelZh = '红润防暴';
+      labelEn = 'Rosy Skin Backup';
+    } else {
+      presetId = 'cream';
+      baseAdviceZh = '当前属于均衡光环境。已为你微调舒适暖光「奶油肌」，抹除面部细微暗哑，随手一拍即是通透原生感！';
+      baseAdviceEn = 'Uniform light detected. Suggested iconic Warm Soft "Cream Skin" to smoothly enrich face complexion!';
+      labelZh = '原生润肤';
+      labelEn = 'Natural Soften';
+    }
+
+    // 3. User Aesthetic Preference Adjustment Overlay!
+    let memoryEffect = '';
+    const favPreset = FILL_LIGHT_PRESETS.find(p => p.id === preferences.favoritePresetId);
+    const favName = favPreset ? (isZh ? favPreset.name : favPreset.englishName) : '';
+
+    if (preferences.styleMode === 'cool_tech' && presetId !== 'cold' && presetId !== 'moonlight') {
+      // User loves Cool style, offset recommendation!
+      presetId = 'cold';
+      baseAdviceZh = `【已依偏好偏移】检测到你近期在 Lumi 中偏爱「高级冷色」审美。我们特意将推荐方案偏移为「冷白皮」，直接拍照，已剔除复杂曝光！`;
+      baseAdviceEn = `[Aesthetic Preference Offset] Knowing your custom taste is cool-toned, Lumi automatically calibrated to "Ice White"!`;
+      memoryEffect = isZh ? '✦ 已依偏好转换为高级冷感自拍配方' : '✦ Balanced for Cold High-Fashion preference';
+    } else if (preferences.styleMode === 'glamorous' && presetId !== 'love') {
+      presetId = 'love';
+      baseAdviceZh = `【已依偏好偏移】结合你喜爱的「甜系氛围」习惯，正在为你输出「初恋粉」补发光。柔亮漫射，已帮你将自拍照调整得粉嫩又高级！`;
+      baseAdviceEn = `[Aesthetic Preference Offset] To cater your "Sweet Blush" style preference, we automatically applied "First Love" vibe!`;
+      memoryEffect = isZh ? '✦ 已融入甜美粉嫩自拍特调算法' : '✦ Infused with Sweet Pinkish glow';
+    } else {
+      // General feedback mentioning how they look gorgeous/Lumi gets smarter
+      if (preferences.favoritePresetId && favName) {
+        memoryEffect = isZh 
+          ? `✦ 契合你偏爱的「${favName}」偏色 (已累计应用 ${preferences.usageCounts[preferences.favoritePresetId] || 1} 次)`
+          : `✦ Harmonized with your staple 「${favName}」 preference`;
+      } else {
+        memoryEffect = isZh ? '✦ Lumi 已经为你调好了。点按即可，瞬间变好看' : '✦ Lumi AI auto-applied, snapshot ready!';
       }
     }
 
-    // Otherwise, translate dynamic readings from camera scanner
-    if (bright < 85 && warm > 1.25) {
-      return {
-        presetId: 'cold',
-        adviceZh: '当前光影昏暗偏黄，推荐去黄提亮冷光「冷白皮」',
-        adviceEn: 'Dim & yellow ambient detected, try "Ice White" preset',
-        labelZh: '暗黄低光',
-        labelEn: 'Dark Warm Light',
-      };
-    }
-    if (bright < 95 && warm < 0.88) {
-      return {
-        presetId: 'moonlight',
-        adviceZh: '处于夜晚冷色低光，推荐引入清冷幽蓝「月光蓝」',
-        adviceEn: 'Night cold ambient detected, try "Moonlight" preset',
-        labelZh: '夜晚冷光',
-        labelEn: 'Night Cool',
-      };
-    }
-    if (warm > 1.32) {
-      return {
-        presetId: 'sunset',
-        adviceZh: '周围笼罩温馨暖调，合衬推荐复古胶片「日落橘」',
-        adviceEn: 'Warm indoor surrounding atmosphere, try "Sunset Glow"',
-        labelZh: '温馨暖光',
-        labelEn: 'Warm Ambient',
-      };
-    }
-    if (bright > 165) {
-      return {
-        presetId: 'love',
-        adviceZh: '环境日光饱满清莹，推荐点缀少女气质「初恋粉」',
-        adviceEn: 'Bright day light environment, try "First Love" preset',
-        labelZh: '户外光照',
-        labelEn: 'Bright Daylight',
-      };
-    }
     return {
-      presetId: 'cream',
-      adviceZh: '面部略显疲惫暗沉，建议润色磨皮首选「奶油肌」',
-      adviceEn: 'Skin tone looks slightly dull. Try "Cream Skin" to warm up',
-      labelZh: '面容微暗',
-      labelEn: 'Slightly Dull',
+      presetId,
+      adviceZh: baseAdviceZh,
+      adviceEn: baseAdviceEn,
+      labelZh,
+      labelEn,
+      detectedBright,
+      detectedWarm,
+      detectedBg,
+      detectedSkin,
+      detectedTime,
+      detectedPlace,
+      memoryEffect
     };
   };
 
   const recommendedInfo = getRecommendation(ambientStats.brightness, ambientStats.warmth);
   const recommendedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendedInfo.presetId) || FILL_LIGHT_PRESETS[0];
+
+  // ⚡ Lumi AI Auto-Tune / 自动追光 effect
+  useEffect(() => {
+    if (preferences.autoApply) {
+      setActivePreset(recommendedPreset);
+      
+      // Personalize default intensity: blend preset's default with user's average!
+      let targetB = recommendedPreset.intensity;
+      targetB = parseFloat(((targetB * 0.35) + (preferences.averageBrightness * 0.65)).toFixed(2));
+      
+      // clamp targetB
+      if (targetB < 0.25) targetB = 0.25;
+      if (targetB > 1.0) targetB = 1.0;
+
+      // Personalize default softness: blend user preference average softmax with default 0.65
+      let targetS = 0.65;
+      targetS = parseFloat(((targetS * 0.4) + (preferences.averageSoftness * 0.6)).toFixed(2));
+      if (targetS < 0.15) targetS = 0.15;
+      if (targetS > 0.95) targetS = 0.95;
+
+      setBrightness(targetB);
+      setSoftness(targetS);
+    }
+  }, [recommendedPreset.id, preferences.autoApply]);
 
   const handleApplyAiRecommendation = () => {
     playSound('focus'); // play mechanical cinematic dual-tone sound for magical feeling
@@ -353,9 +510,39 @@ export default function App() {
     );
   };
 
+  const handleRecordPresetUsage = (presetId: string) => {
+    setPreferences((prev) => {
+      const counts = { ...prev.usageCounts };
+      counts[presetId] = (counts[presetId] || 0) + 1;
+      
+      // Determine favorite preset
+      let fav = prev.favoritePresetId;
+      let maxCount = 0;
+      Object.keys(counts).forEach((key) => {
+        if (counts[key] > maxCount) {
+          maxCount = counts[key];
+          fav = key;
+        }
+      });
+
+      // Capture nighttime favorite
+      const currentHour = new Date().getHours();
+      const isNight = currentHour >= 18 || currentHour < 6;
+      const nightSet = isNight ? presetId : prev.nighttimePresetId;
+
+      return {
+        ...prev,
+        usageCounts: counts,
+        favoritePresetId: fav,
+        nighttimePresetId: nightSet,
+      };
+    });
+  };
+
   const handlePresetSelect = (preset: FillLightPreset) => {
     playSound('click');
     setActivePreset(preset);
+    handleRecordPresetUsage(preset.id);
     analyticsTracker.track('preset_change', {
       presetId: preset.id,
       presetName: preset.name,
@@ -381,6 +568,12 @@ export default function App() {
   const handleBrightnessChange = (val: number) => {
     setBrightness(val);
     
+    // Smoothly update preferred average
+    setPreferences(prev => ({
+      ...prev,
+      averageBrightness: parseFloat(((prev.averageBrightness * 4 + val) / 5).toFixed(3))
+    }));
+    
     // Debounce the analytics event to prevent flooding tracking history on sliding
     if (analyticsTimeoutRef.current.brightness) {
       window.clearTimeout(analyticsTimeoutRef.current.brightness);
@@ -392,6 +585,12 @@ export default function App() {
 
   const handleSoftnessChange = (val: number) => {
     setSoftness(val);
+
+    // Smoothly update preferred average
+    setPreferences(prev => ({
+      ...prev,
+      averageSoftness: parseFloat(((prev.averageSoftness * 4 + val) / 5).toFixed(3))
+    }));
 
     if (analyticsTimeoutRef.current.softness) {
       window.clearTimeout(analyticsTimeoutRef.current.softness);
@@ -477,8 +676,6 @@ export default function App() {
       });
     }, 300);
   };
-
-  const isZh = settings.language === 'zh';
 
   // Toggle simulation versus physical web box
   const handleToggleSimulatedCamera = (val: boolean) => {
@@ -798,61 +995,6 @@ export default function App() {
 
         {/* Cinematic Viewfinder (Mirrors physical screen) */}
         <div className="flex-1 w-full flex flex-col items-center justify-center overflow-hidden py-1 min-h-[35vh]">
-          {/* ✨ Lumi AI Smart Ambient Recommendation Floating Badge (Repositioned completely outside the viewfinder container so it never blocks the preview lens!) */}
-          {settings.language && (
-            <div className="w-[94%] max-w-[340px] z-35 mb-2.5 transition-all duration-300">
-              <div 
-                className="bg-black/85 hover:bg-black/90 backdrop-blur-xl border border-white/15 px-3 py-2 rounded-2xl shadow-xl flex items-center justify-between gap-2 transition-all text-white"
-                style={{
-                  boxShadow: activePreset.id === recommendedPreset.id 
-                    ? `0 12px 30px -5px rgba(0,0,0,0.6), 0 0 14px 2px ${recommendedPreset.color}45` 
-                    : `0 12px 30px -5px rgba(0,0,0,0.6)`
-                }}
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex-shrink-0 relative flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300">
-                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-                    {activePreset.id !== recommendedPreset.id && (
-                      <span className="absolute -top-0.5 -right-0.5 flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75 animate-duration-1000"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-pink-500"></span>
-                      </span>
-                    )}
-                  </span>
-                  <div className="flex flex-col text-left min-w-0">
-                    <p className="text-[10px] text-white/50 font-sans tracking-tight truncate flex items-center gap-1">
-                      <span className="font-semibold text-white/70">Lumi AI {isZh ? '光感极速配' : 'Lighting AI'}</span>
-                      <span className="opacity-40">•</span>
-                      <span className="text-[9px] text-[#A6B5FF] font-medium">
-                        {isZh ? recommendedInfo.labelZh : recommendedInfo.labelEn}
-                      </span>
-                    </p>
-                    <p className="text-[10.5px] text-white/95 font-medium leading-tight truncate">
-                      {isZh ? recommendedInfo.adviceZh : recommendedInfo.adviceEn}
-                    </p>
-                  </div>
-                </div>
-
-                {activePreset.id === recommendedPreset.id ? (
-                  <div className="flex-shrink-0 flex items-center gap-1 px-1.5 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-[9.5px] text-emerald-300 font-medium whitespace-nowrap">
-                    <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>{isZh ? '已最称心' : 'Matched'}</span>
-                  </div>
-                ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleApplyAiRecommendation();
-                    }}
-                    className="flex-shrink-0 px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/20 text-[9.5px] text-white font-sans font-bold shadow-md cursor-pointer transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
-                  >
-                    💡 {isZh ? '一键补光' : 'Apply'}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
           <div 
             className={`overflow-hidden relative transition-all duration-500 ease-out border-4 border-white/85 bg-stone-950
               ${viewfinderSize === 'standard' ? 'w-full aspect-[3/4] max-h-[46vh] rounded-[36px]' : ''}
@@ -916,62 +1058,283 @@ export default function App() {
           </div>
         </div>
 
-        {/* AI Atmosphere Simulation Selector Capsule */}
-        <div className="w-full flex flex-col items-center mb-1 px-1 z-20">
-          <div className="w-full flex items-center justify-between px-3 py-1.5 bg-black/45 rounded-2xl border border-white/5 shadow-inner mb-1 text-white/75">
-            <span className="text-[10px] font-sans tracking-wide flex items-center gap-1 animate-pulse">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="font-semibold text-white/90">{isZh ? 'Lumi AI 智能环境传感器' : 'Lumi AI Atmosphere Radar'}</span>
-            </span>
-            <div className="flex gap-1.5 items-center">
-              <button 
-                onClick={() => {
-                  playSound('click');
-                  setSimulatedScenario(simulatedScenario === 'none' ? 'dull' : 'none');
-                }}
-                className={`px-2 py-0.5 rounded-lg text-[9px] font-sans tracking-wide border transition-all cursor-pointer ${
-                  simulatedScenario !== 'none'
-                    ? 'bg-indigo-600/30 border-indigo-500 text-indigo-200 font-bold'
-                    : 'bg-white/5 border-white/10 text-white/50 hover:text-white'
-                }`}
-              >
-                {simulatedScenario !== 'none' ? (isZh ? '仿真调试中' : 'Simulating') : (isZh ? '环境仿真' : 'Simulate')}
-              </button>
-            </div>
-          </div>
+        {/* =========================================================
+            Ⅱ. LUMI AI SELFIE AMBIANCE COMPANION CONTROL DECK
+            ========================================================= */}
+        <div className="w-full flex flex-col items-center mb-1.5 px-3 z-20">
+          {!isAiPanelExpanded ? (
+            /* 🌲 COMPACT COLLAPSED SINGLE-LINE LUXURY PILL */
+            <div 
+              onClick={() => {
+                playSound('click');
+                setIsAiPanelExpanded(true);
+              }}
+              className="w-full bg-[#16161a]/90 hover:bg-[#1c1c22]/95 border border-white/10 hover:border-indigo-500/35 px-3.5 py-2.5 rounded-2xl shadow-lg backdrop-blur-md flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-99 group animate-fade-in"
+            >
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span className="flex-shrink-0 relative flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 group-hover:scale-105 transition-transform">
+                  <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                </span>
+                <div className="flex flex-col text-left min-w-0">
+                  <p className="text-[10px] text-white/50 font-sans tracking-tight truncate flex items-center gap-1">
+                    <span className="font-semibold text-white/80">Lumi AI {isZh ? '智能追光中' : 'AI Autotune'}</span>
+                    <span className="opacity-40">•</span>
+                    <span className="text-[9px] text-[#A6B5FF] font-medium">
+                      {preferences.autoApply ? (isZh ? '已自动补光' : 'Auto-Tuned') : (isZh ? '美学推荐' : 'Aesthetic Advice')}
+                    </span>
+                  </p>
+                  <p className="text-[11px] text-white/95 font-medium leading-tight truncate font-sans">
+                    {isZh ? (
+                      `推荐「${recommendedPreset.name}」· ${recommendedInfo.labelZh} (点击查看美学分析)`
+                    ) : (
+                      `Recommended "${recommendedPreset.englishName}" (Vibe: ${recommendedInfo.labelEn})`
+                    )}
+                  </p>
+                </div>
+              </div>
 
-          {simulatedScenario !== 'none' && (
-            <div className="w-full flex gap-1.5 py-1.5 px-1.5 overflow-x-auto scrollbar-none snap-x justify-start bg-black/60 border border-white/10 rounded-2xl backdrop-blur-md shadow-lg duration-300">
-              {AMB_SCENARIOS.map((scen) => (
-                <button
-                  key={scen.id}
+              {/* Action area: Show state + expand trigger */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {!preferences.autoApply && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      playSound('focus');
+                      setActivePreset(recommendedPreset);
+                    }}
+                    className="px-2 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-[9.5px] text-white font-sans font-bold shadow-md cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+                  >
+                    💡 {isZh ? '应用' : 'Apply'}
+                  </button>
+                )}
+                <span className="text-[10.5px] text-indigo-300 font-bold hover:text-indigo-200 transition-colors pl-1 flex items-center gap-0.5 whitespace-nowrap">
+                  {isZh ? '分析 ∨' : 'Analyses ∨'}
+                </span>
+              </div>
+            </div>
+          ) : (
+            /* 🎨 EXPANDED HIGH-FIDELITY ANALYTICAL DASHBOARD */
+            <div className="w-full bg-[#16161a]/95 border border-white/10 rounded-2xl p-3 shadow-2xl backdrop-blur-md flex flex-col gap-3">
+              
+              {/* Header: Title + Auto Apply Toggle */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                <div 
                   onClick={() => {
                     playSound('click');
-                    setSimulatedScenario(scen.id);
-                    setAmbientStats({ brightness: scen.brightness, warmth: scen.warmth });
+                    setIsAiPanelExpanded(false);
                   }}
-                  className={`flex-shrink-0 snap-center min-w-[76px] px-2 py-1.5 rounded-xl text-[10px] font-sans flex flex-col items-center gap-0.5 border cursor-pointer transition-all duration-200 ${
-                    simulatedScenario === scen.id
-                      ? 'bg-white text-neutral-900 border-white font-bold transform scale-102 shadow-md'
-                      : 'bg-white/5 text-white/75 border-white/5 hover:bg-white/10 hover:text-white'
+                  className="flex items-center gap-1.5 min-w-0 cursor-pointer group/hdr hover:opacity-90"
+                >
+                  <span className="relative flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 group-hover/hdr:scale-105 transition-transform">
+                    <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                  </span>
+                  <div className="flex flex-col text-left">
+                    <span className="text-xs font-semibold text-white tracking-wider flex items-center gap-1.5">
+                      {isZh ? 'Lumi AI 氛围美学伴侣' : 'Lumi AI Ambiance Companion'}
+                      <span className="text-[9.5px] bg-white/5 text-white/40 group-hover/hdr:text-indigo-300 group-hover/hdr:bg-indigo-500/10 transition-all font-sans px-1.5 py-0.5 rounded-md">
+                        {isZh ? '收起 ︿' : 'Fold ︿'}
+                      </span>
+                    </span>
+                    <span className="text-[9px] text-[#A6B5FF] font-medium tracking-tight">
+                      {isZh ? '自适应多准则美学感应与习惯记忆' : 'Multi-sensor aesthetic tuning'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Toggle Auto Apply */}
+                <button
+                  onClick={() => {
+                    playSound('click');
+                    setPreferences(prev => {
+                      const next = !prev.autoApply;
+                      if (next) {
+                        setActivePreset(recommendedPreset);
+                      }
+                      return { ...prev, autoApply: next };
+                    });
+                  }}
+                  className={`px-3 py-1 rounded-full text-[9.5px] font-sans font-bold flex items-center gap-1 border transition-all cursor-pointer ${
+                    preferences.autoApply
+                      ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400 font-extrabold shadow-sm'
+                      : 'bg-white/5 border-white/10 text-white/40'
                   }`}
                 >
-                  <span className="text-sm leading-none">{scen.icon}</span>
-                  <span className="tracking-tight font-medium text-[9.5px]">{isZh ? scen.name : scen.englishName}</span>
+                  <span className={`w-1 h-1 rounded-full ${preferences.autoApply ? 'bg-emerald-400 animate-pulse' : 'bg-white/30'}`} />
+                  <span>{preferences.autoApply ? (isZh ? '自动追光·开' : 'Auto-Tune On') : (isZh ? '手动追光·关' : 'Manual Tune')}</span>
                 </button>
-              ))}
+              </div>
+
+              {/* Row 1: Real-time Multi-Sensor Radar Analyzer Diagnostics */}
+              <div className="flex flex-wrap gap-1">
+                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-white/70 font-sans tracking-tight">
+                  🌍 {recommendedInfo.detectedPlace}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-white/70 font-sans tracking-tight">
+                  🌌 {recommendedInfo.detectedTime}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-white/70 font-sans tracking-tight">
+                  🔆 {recommendedInfo.detectedBright}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-white/70 font-sans tracking-tight">
+                  🌡️ {recommendedInfo.detectedWarm}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-[#A6B5FF] font-sans tracking-tight font-medium">
+                  👤 {recommendedInfo.detectedSkin}
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-white/5 border border-white/5 text-[9px] text-amber-200/90 font-sans tracking-tight font-medium">
+                  🎨 {recommendedInfo.detectedBg}
+                </span>
+              </div>
+
+              {/* Row 2: Aesthetic Preference Segment (My custom style mode) */}
+              <div className="flex flex-col gap-1 text-left bg-white/5 rounded-xl p-2 border border-white/5">
+                <span className="text-[10px] text-white/50 font-sans font-medium tracking-wide flex justify-between">
+                  <span>🎨 {isZh ? '自拍美学倾向' : 'Selfie Taste Style'}</span>
+                  <span className="text-[9px] text-indigo-300">{isZh ? '直接调校分析规则' : 'Alters tuning algorithm'}</span>
+                </span>
+                <div className="grid grid-cols-3 gap-1 grid-rows-1">
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      setPreferences(prev => ({ ...prev, styleMode: 'natural' }));
+                    }}
+                    className={`py-1 rounded-lg text-[10px] font-sans font-bold flex items-center justify-center border transition-all cursor-pointer ${
+                      preferences.styleMode === 'natural'
+                        ? 'bg-neutral-100 text-neutral-900 border-white font-extrabold shadow-sm'
+                        : 'bg-white/5 text-white/60 border-transparent hover:text-white'
+                    }`}
+                  >
+                    <span>👶 {isZh ? '元气原生' : 'Natural'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      setPreferences(prev => ({ ...prev, styleMode: 'cool_tech' }));
+                    }}
+                    className={`py-1 rounded-lg text-[10px] font-sans font-bold flex items-center justify-center border transition-all cursor-pointer ${
+                      preferences.styleMode === 'cool_tech'
+                        ? 'bg-neutral-100 text-neutral-900 border-white font-extrabold shadow-sm'
+                        : 'bg-white/5 text-white/60 border-transparent hover:text-white'
+                    }`}
+                  >
+                    <span>💎 {isZh ? '高级冷色' : 'Chic Cool'}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      setPreferences(prev => ({ ...prev, styleMode: 'glamorous' }));
+                    }}
+                    className={`py-1 rounded-lg text-[10px] font-sans font-bold flex items-center justify-center border transition-all cursor-pointer ${
+                      preferences.styleMode === 'glamorous'
+                        ? 'bg-neutral-100 text-neutral-900 border-white font-extrabold shadow-sm'
+                        : 'bg-white/5 text-white/60 border-transparent hover:text-white'
+                    }`}
+                  >
+                    <span>🌸 {isZh ? '甜系氛围' : 'Sweet Blush'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 3: Conversational Prompt Advice Bubble + Big action button */}
+              <div className="bg-[#1c1c24] rounded-xl p-2.5 border border-indigo-500/10 flex flex-col gap-1.5 relative overflow-hidden">
+                <div className="absolute right-2 top-2 bg-indigo-500/5 text-[30px] leading-none select-none text-indigo-400 pointer-events-none opacity-20">
+                  ✍️
+                </div>
+                
+                <div className="flex gap-2 items-start text-left">
+                  <span className="text-xs select-none pt-0.5">🤖</span>
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <p className="text-[10.5px] text-white/95 font-medium leading-relaxed font-sans">
+                      {isZh ? recommendedInfo.adviceZh : recommendedInfo.adviceEn}
+                    </p>
+                    <p className="text-[9.5px] text-[#A6B5FF] font-sans font-semibold tracking-wide mt-1">
+                      {recommendedInfo.memoryEffect}
+                    </p>
+                  </div>
+                </div>
+
+                {/* If Auto Apply is off, show the manual apply button */}
+                {!preferences.autoApply && (
+                  <button
+                    onClick={() => {
+                      playSound('focus');
+                      setActivePreset(recommendedPreset);
+                      showToast(isZh 
+                        ? `✨ 已一键同步应用「${recommendedPreset.name}」极速补光色彩！` 
+                        : `✨ Synchronized AI recommended 「${recommendedPreset.englishName}」!`
+                      );
+                    }}
+                    className="w-full mt-1 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-[10px] text-white font-sans font-bold tracking-wider cursor-pointer shadow-md transition-all active:scale-98"
+                  >
+                    💡 一键应用 AI 补光配方 ({isZh ? recommendedPreset.name : recommendedPreset.englishName})
+                  </button>
+                )}
+              </div>
+
+              {/* Row 4: Expandable Simulation Controls Sub-panel */}
+              <div className="flex flex-col gap-1 text-left border-t border-white/5 pt-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] text-white/40 font-sans font-semibold tracking-wider flex items-center gap-1">
+                    🔬 {isZh ? '自拍光感传感器（仿真调试区）' : 'Aesthetic Simulation Sandbox'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      setSimulatedScenario(simulatedScenario === 'none' ? 'dull' : 'none');
+                    }}
+                    className="text-[9.5px] text-[#A6B5FF] hover:text-white font-sans font-bold transition-colors"
+                  >
+                    {simulatedScenario !== 'none' ? (isZh ? '关闭传感器仿真' : 'Close Demo') : (isZh ? '打开传感器仿真 🔧' : 'Open Demo 🔧')}
+                  </button>
+                </div>
+
+                {simulatedScenario !== 'none' && (
+                  <div className="w-full flex gap-1 py-1 overflow-x-auto scrollbar-none snap-x justify-start mt-0.5">
+                    {AMB_SCENARIOS.map((scen) => (
+                      <button
+                        key={scen.id}
+                        onClick={() => {
+                          playSound('click');
+                          setSimulatedScenario(scen.id);
+                          setAmbientStats({ brightness: scen.brightness, warmth: scen.warmth });
+                        }}
+                        className={`flex-shrink-0 snap-center min-w-[76px] px-2 py-1 flex flex-col items-center gap-0.5 border rounded-lg text-[9px] font-sans cursor-pointer transition-all duration-200 ${
+                          simulatedScenario === scen.id
+                            ? 'bg-white text-neutral-900 border-white font-extrabold shadow-sm scale-102'
+                            : 'bg-white/5 text-white/70 border-white/5 hover:bg-white/10 hover:text-white'
+                        }`}
+                      >
+                        <span className="text-xs leading-none">{scen.icon}</span>
+                        <span className="tracking-tight font-medium text-[8.5px]">{isZh ? scen.name : scen.englishName}</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => {
+                        playSound('click');
+                        setSimulatedScenario('none');
+                        setAmbientStats({ brightness: 110, warmth: 1.0 });
+                      }}
+                      className="flex-shrink-0 snap-center min-w-[70px] px-2 py-1 flex flex-col items-center gap-0.5 bg-red-400/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 cursor-pointer transition-all rounded-lg text-[9px] font-sans"
+                    >
+                      <span className="text-xs leading-none">🔄</span>
+                      <span className="tracking-tight font-medium text-[8.5px]">{isZh ? '相机自适应' : 'Auto Cam'}</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Collapse Button at the bottom of the deck */}
               <button
                 onClick={() => {
                   playSound('click');
-                  setSimulatedScenario('none');
-                  // Reset stats to normal defaults
-                  setAmbientStats({ brightness: 110, warmth: 1.0 });
+                  setIsAiPanelExpanded(false);
                 }}
-                className="flex-shrink-0 snap-center min-w-[70px] px-2 py-1.5 rounded-xl text-[10px] font-sans flex flex-col items-center gap-0.5 bg-red-500/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 cursor-pointer transition-all"
+                className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[10px] text-white/60 hover:text-white font-sans font-semibold border border-white/5 hover:border-white/10 transition-all cursor-pointer flex items-center justify-center gap-1 mt-1"
               >
-                <span className="text-sm leading-none">🔄</span>
-                <span className="tracking-tight font-medium text-[9.5px]">{isZh ? '相机自适应' : 'Auto Cam'}</span>
+                <span>{isZh ? '收起美学分析面板' : 'Collapse Analysis Panel'}</span>
+                <span className="text-[8px] opacity-60">▲</span>
               </button>
+
             </div>
           )}
         </div>

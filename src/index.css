@@ -91,3 +91,15 @@
               transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes scan {
+  0% { top: 0%; opacity: 0.3; }
+  10% { opacity: 0.8; }
+  50% { top: 100%; opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { top: 0%; opacity: 0.3; }
+}
+
+.mirror-pip {
+  transform: scaleX(-1);
+}
+

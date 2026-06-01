@@ -44,8 +44,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [apiKey, setApiKey] = useState<string>(() => {
     return localStorage.getItem('lumi_api_key') || '';
   });
+  const [lastSavedTime, setLastSavedTime] = useState<string | null>(() => {
+    return localStorage.getItem('lumi_api_last_saved') || null;
+  });
   const [showKey, setShowKey] = useState<boolean>(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
+
+  const formatDate = (isoMsg: string) => {
+    try {
+      const d = new Date(isoMsg);
+      if (isNaN(d.getTime())) return isoMsg;
+      return d.toLocaleString(undefined, {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
+    } catch (e) {
+      return isoMsg;
+    }
+  };
 
   const toggleSetting = (key: keyof AppSettings) => {
     onUpdateSettings({
@@ -235,6 +255,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 : 'Your API information is stored locally and only used to access AI-powered features.'}
             </p>
 
+            {/* Connection Status and Last Saved Time Row (Only displays if credentials exist) */}
+            {apiEndpoint && apiKey && (
+              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 border border-emerald-100 border-solid text-left">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    {isZh ? '已连接 (Connected)' : 'Connected'}
+                  </span>
+                  {lastSavedTime && (
+                    <span className="text-[9px] text-emerald-600/80 font-mono">
+                      {isZh 
+                        ? `最后保存时间: ${formatDate(lastSavedTime)}` 
+                        : `Last Saved: ${formatDate(lastSavedTime)}`}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* API Endpoint Input */}
             <div className="flex flex-col gap-1.5 text-left">
               <label className="text-[11px] font-medium text-[#cca0ab]">
@@ -275,8 +314,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Save Button */}
             <button
               onClick={() => {
+                const nowStr = new Date().toISOString();
                 localStorage.setItem('lumi_api_endpoint', apiEndpoint);
                 localStorage.setItem('lumi_api_key', apiKey);
+                localStorage.setItem('lumi_api_last_saved', nowStr);
+                setLastSavedTime(nowStr);
                 setIsSaved(true);
                 setTimeout(() => {
                   setIsSaved(false);

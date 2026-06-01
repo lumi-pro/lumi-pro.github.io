@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AppSettings } from '../types';
 import {
   X,
@@ -17,6 +17,8 @@ import {
   Heart,
   Vibrate,
   Camera,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -36,6 +38,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useSimulatedPortrait,
   onToggleSimulatedPortrait,
 }) => {
+  const [apiEndpoint, setApiEndpoint] = useState<string>(() => {
+    return localStorage.getItem('lumi_api_endpoint') || '';
+  });
+  const [apiKey, setApiKey] = useState<string>(() => {
+    return localStorage.getItem('lumi_api_key') || '';
+  });
+  const [showKey, setShowKey] = useState<boolean>(false);
+  const [isSaved, setIsSaved] = useState<boolean>(false);
+
   const toggleSetting = (key: keyof AppSettings) => {
     onUpdateSettings({
       ...settings,
@@ -209,6 +220,82 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* AI API Configuration Section */}
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-heading font-semibold tracking-wider text-[#cca0ab] uppercase block px-1 animate-pulse">
+            {isZh ? 'AI 接口配置 (AI API Configuration)' : 'AI API Configuration'}
+          </span>
+          <div className="bg-white rounded-2xl border border-pink-100/60 p-4 shadow-sm flex flex-col gap-3.5">
+            <p className="text-[10px] text-neutral-400 leading-normal mb-1">
+              {isZh 
+                ? '您的 API 信息保存在本地设备，仅用于访问 AI 智能分析功能。' 
+                : 'Your API information is stored locally and only used to access AI-powered features.'}
+            </p>
+
+            {/* API Endpoint Input */}
+            <div className="flex flex-col gap-1.5 text-left">
+              <label className="text-[11px] font-medium text-[#cca0ab]">
+                {isZh ? 'API 接口端点 (API Endpoint)' : 'API Endpoint'}
+              </label>
+              <input
+                type="text"
+                value={apiEndpoint}
+                onChange={(e) => setApiEndpoint(e.target.value)}
+                placeholder="https://api.openai.com/v1/chat/completions"
+                className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
+              />
+            </div>
+
+            {/* API Key Input */}
+            <div className="flex flex-col gap-1.5 text-left transition-all">
+              <label className="text-[11px] font-medium text-[#cca0ab] flex items-center justify-between">
+                <span>{isZh ? '接口密钥 (API Key)' : 'API Key'}</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={isZh ? '请输入您的 API Key' : 'Enter your API Key'}
+                  className="w-full h-9 rounded-xl border border-pink-100 pl-3 pr-10 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowKey(!showKey)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 focus:outline-none"
+                >
+                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <button
+              onClick={() => {
+                localStorage.setItem('lumi_api_endpoint', apiEndpoint);
+                localStorage.setItem('lumi_api_key', apiKey);
+                setIsSaved(true);
+                setTimeout(() => {
+                  setIsSaved(false);
+                }, 2000);
+              }}
+              className={`w-full h-9 rounded-xl font-medium text-xs tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 mt-2 shadow-sm cursor-pointer select-none
+                ${isSaved 
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 border-solid' 
+                  : 'bg-[#ff80a3] hover:bg-[#ff6290] text-white border-none'}`}
+            >
+              {isSaved ? (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{isZh ? '配置保存成功！' : 'Saved Successfully!'}</span>
+                </>
+              ) : (
+                <span>{isZh ? '保存 (Save)' : 'Save'}</span>
+              )}
+            </button>
           </div>
         </div>
 

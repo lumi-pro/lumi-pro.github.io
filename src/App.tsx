@@ -56,6 +56,8 @@ interface UserPreferences {
     softness: number;
     intensityLevel: 'soft' | 'normal' | 'rich' | 'studio';
   }>;
+  lastSelectedPresetId?: string;
+  consecutiveCount?: number;
 }
 
 const AMB_SCENARIOS: AmbientScenario[] = [
@@ -126,8 +128,8 @@ export default function App() {
   const [splitPresetRight, setSplitPresetRight] = useState<FillLightPreset>(FILL_LIGHT_PRESETS[2]); // 冷白皮
   const [selectedSplitSide, setSelectedSplitSide] = useState<'left' | 'right'>('left');
 
-  const [brightness, setBrightness] = useState<number>(0.85); // 15% to 100%
-  const [softness, setSoftness] = useState<number>(0.65); // Color saturation/dilution
+  const [brightness, setBrightness] = useState<number>(0.80); // 15% to 100%
+  const [softness, setSoftness] = useState<number>(0.70); // Color saturation/dilution
   const [intensityLevel, setIntensityLevel] = useState<'soft' | 'normal' | 'rich' | 'studio'>('normal');
 
   // AI Ambient Light Recommendation Engine States
@@ -200,12 +202,14 @@ export default function App() {
          return {
            favoritePresetId: parsed.favoritePresetId || 'cream',
            usageCounts: parsed.usageCounts || { cream: 3, love: 1, cold: 2 },
-           averageBrightness: parsed.averageBrightness ?? 0.85,
-           averageSoftness: parsed.averageSoftness ?? 0.65,
+           averageBrightness: parsed.averageBrightness ?? 0.80,
+           averageSoftness: parsed.averageSoftness ?? 0.70,
            nighttimePresetId: parsed.nighttimePresetId || 'cold',
            autoApply: parsed.autoApply ?? true,
            styleMode: parsed.styleMode || 'natural',
            sceneMemory: parsed.sceneMemory || {},
+           lastSelectedPresetId: parsed.lastSelectedPresetId || '',
+           consecutiveCount: parsed.consecutiveCount ?? 0,
          };
        }
     } catch (e) {
@@ -214,16 +218,18 @@ export default function App() {
     return {
        favoritePresetId: 'cream',
        usageCounts: { cream: 2, love: 1, cold: 1 },
-       averageBrightness: 0.85,
-       averageSoftness: 0.65,
+       averageBrightness: 0.80,
+       averageSoftness: 0.70,
        nighttimePresetId: 'cold',
        autoApply: true,
        styleMode: 'natural',
        sceneMemory: {},
+       lastSelectedPresetId: '',
+       consecutiveCount: 0,
     };
   });
 
-  // Keep preferences in persistent storage
+// Keep preferences in persistent storage
   useEffect(() => {
     try {
       localStorage.setItem('lumi_user_preferences', JSON.stringify(preferences));
@@ -284,6 +290,7 @@ export default function App() {
   const [activeViewPhoto, setActiveViewPhoto] = useState<CapturedPhoto | null>(null);
   const [showOriginal, setShowOriginal] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showApiKeyPrompt, setShowApiKeyPrompt] = useState<boolean>(false);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -741,7 +748,7 @@ export default function App() {
       bgTempZh = '高热温暖黄 (色温约 3200K)';
       bgTempEn = 'Cozy warm temperature sphere (3200K)';
 
-      baseAdviceZh = '✨ 检测到您处于温馨但偏黄暗淡的居家中。由于环境光偏黄、眼下伴随熬夜暗沉，Lumi 特别避免推荐日落橘等暖色，而是为您定制了「奶油肌」自适应配方。它能深度对冲面色蜡黄、温顺抹平下睑泪沟阴影，一键展现软润剔透的婴儿级原生美肌！';
+      baseAdviceZh = '✨ 脸颊有点疲倦，试试「奶油肌」饱满气色哦';
       baseAdviceEn = '✨ Cozy yet warm yellow home detected. Since the backdrop already carries heavy yellow casts, Lumi avoided deep oranges and auto-applied clarifying "Cream Skin" instead. It softly neutralizes skin dullness and plumps under-eye dark circles, creating a clean velvety finish.';
 
       stepsZh = [
@@ -793,7 +800,7 @@ export default function App() {
       bgTempZh = '温馨暖煦金 (色温约 3000K)';
       bgTempEn = 'Balmy gold café light (3000K)';
 
-      baseAdviceZh = '✨ 检测到您处于格调极高的咖啡馆/慢餐厅中，当前妆色精美立体。Lumi 智能推断您正在进行富有社交质感的自拍分享！为您特别定制暖甜「柔樱粉黛」氛围，不仅补充气血微红，更能立体塑形咬肌轮廓，定格好感度爆棚的名媛故事感自拍！';
+      baseAdviceZh = '✨ 这里灯光温润，用「柔樱粉黛」气色加分哦';
       baseAdviceEn = '✨ Sophisticated cafe scenery detected with excellent makeup and dimensional skin. Lumi deduced this is a social-sharing self-portrait! We selected sweet velvet "Sweet Peach" fill light to inject a rosy blossom flush on your cheeks, outlining stunning photogenic confidence.';
 
       stepsZh = [
@@ -845,7 +852,7 @@ export default function App() {
       bgTempZh = '冰冷太空高阶蓝 (色温约 7500K)';
       bgTempEn = 'Midnight icy indigo tone (7500K)';
 
-      baseAdviceZh = '✨ 您正处于极具故事张力的深夜夜色中。直接照白光不仅会刺眼、更是会破坏夜视背景。Lumi 智能推测您正打算记录一张充满呼吸感的主题自拍！我们定制了霓虹极品「霓虹夜幕」特调补光，在脸颊晕染浅微醺粉紫亮痕，去处黑眼圈，双眼爆发出极致迷离的焦点光晕！';
+      baseAdviceZh = '✨ 深夜太暗啦，配上「迷醺氛围」绝美夜调哦';
       baseAdviceEn = '✨ Mystical city nightscape detected. Shooting stark white flash would wash out this gorgeous skyline and blind you. Lumi deduced this is an ambient night mood self-portrait! We deployed fancy neon "Velvet Mood" fill: rendering cozy twilight violet highlights on your cheekbones, instantly erasing late-night shadow.';
 
       stepsZh = [
@@ -898,7 +905,7 @@ export default function App() {
       bgTempZh = '中性冷硬白 (色温约 5800K)';
       bgTempEn = 'Clinical fluorescent cool white (5800K)';
 
-      baseAdviceZh = '✨ 监测到您在办公室白墙或荧光灯下，极易拍出蜡黄和黯淡疲倦。Lumi 推断您想拍一张元气充足、摆脱办公疲劳的自拍！鉴于环境冷白平淡、皮肤带暗黄，我们特别定制了主力「清冽瓷白」特调，对冲蜡黄泛油，让皮肤如同刚做完密集敷水，瞬间焕发冰润冷白的名媛肤感！';
+      baseAdviceZh = '✨ 灯光太硬皮肤累，推荐「清冽瓷白」更通透';
       baseAdviceEn = '✨ Clinical white office walls and fluorescents detected, causing a tiresome yellow-gray skin tone. Lumi inferred you are in a professional daily commute mood! We calibrated a customized "Porcelain Cool" icy-blue white filter. It completely counteracts yellow skin sebum and purifies tired eyes in one click.';
 
       stepsZh = [
@@ -950,7 +957,7 @@ export default function App() {
       bgTempZh = '纯净金色烈日光 (色温约 5800K)';
       bgTempEn = 'Natural solar glare temp (5800K)';
 
-      baseAdviceZh = '✨ 您正处于高亮开阔的户外艳阳下。强烈的暴晒虽亮，但极易将面颊的自然气红晕晒化或漂白。Lumi 智能推荐唯美的「初恋粉」红晕填充方案，在您面颊轻轻盖一层梦幻粉嫩的桃色保护伞，对冲生硬白暴，瞬间锁住元气满满的少女粉颊！';
+      baseAdviceZh = '✨ 阳光太亮啦，用「初恋粉」锁住白里透红哦';
       baseAdviceEn = '✨ Sunny bright outdoors detected. Massive daylight can bleach your face and wash away your natural blushes. Lumi recommended pink-soft "First Love" schema, adding an artistic peach rose filter to absorb the raw glare and lock in a beautiful healthy flush.';
 
       stepsZh = [
@@ -1000,7 +1007,7 @@ export default function App() {
       bgTempZh = '和煦健康白 (色温约 4500K)';
       bgTempEn = 'Neutral comfortable white temp (4500K)';
 
-      baseAdviceZh = '✨ 当前空气采光极佳、面庞自带温顺立体的对称光影。Lumi 推断您这是一次轻松的居家记录自拍。为您匹配经典柔亮「奶油肌」填充，去除嘴角唇边细小纹路、提拉卧蚕水光感。在无粉感干扰的同时，直出高清原生肌！';
+      baseAdviceZh = '✨ 光亮刚刚好，推荐「奶油肌」打造透亮婴儿肌';
       baseAdviceEn = '✨ Balance is amazing with natural uniform window light. Lumi deduced this is a cozy daytime portrait snap. We suited our signature velvet "Cream Skin" preset. It subtly plumps and erases any minor facial corners without caking, presenting clear high-definition skin.';
 
       stepsZh = [
@@ -1028,7 +1035,7 @@ export default function App() {
 
     if (preferences.styleMode === 'cool_tech' && presetId !== 'cold' && presetId !== 'special_cold_white' && presetId !== 'moonlight') {
       presetId = 'special_cold_white';
-      baseAdviceZh = `✨ 【Lumi 已结合近期习惯】检测到您爱用「高级冷色」冷系冷妆。AI 已自动将补发光谱向「清冽瓷白」特调偏移：它能神奇对冲环境中残留的所有油黄和肤灰。眨眼一下，拍出极致白皙的名媛清冷美颜！`;
+      baseAdviceZh = `✨ 已为你定制冷白色，一键拍出清冷名媛感`;
       baseAdviceEn = `✨ [Habits Tuned] Knowing your aesthetic style matches cold tones, Lumi calibrated suggestion to icy cool "Porcelain Cool", filtering secondary yellow stains and locking crisp chic complexions.`;
       memoryEffect = isZh ? '✦ 已融入您近期的「高级冷色」自拍美学习惯：偏置清冷高亮配方' : '✦ Style Bias adjusted to high-fashion Cool White';
 
@@ -1044,7 +1051,7 @@ export default function App() {
       ];
     } else if (preferences.styleMode === 'glamorous' && presetId !== 'love' && presetId !== 'special_soft_sweet') {
       presetId = 'special_soft_sweet';
-      baseAdviceZh = `✨ 【Lumi 已结合近期习惯】检测到您的近期追光偏好为桃花般粉嫩的「甜系氛围」。AI 已自动为您配对桃色主宰「柔樱粉黛」特调方案。消除脸颊蜡白与黯影，像自带高级心动腮红底妆！`;
+      baseAdviceZh = `✨ 已为你定制浪漫甜系粉桃，自带心动腮红哦`;
       baseAdviceEn = `✨ [Habits Tuned] Knowing your aesthetic style loves sweet and vibrant aesthetics, Lumi adjusted recommendation to soft "Sweet Peach" flush, neutralizing pale shadow lines with cozy peaches.`;
       memoryEffect = isZh ? '✦ 已融入您近期的「甜系氛围」自拍美学习惯：偏置粉桃蜜意配方' : '✦ Style Bias adjusted to sweet Glamour Peach';
 
@@ -1417,6 +1424,16 @@ export default function App() {
 
   const handleAiScan = async () => {
     if (isAiScanning) return;
+
+    // API verification check
+    const storedEndpoint = localStorage.getItem('lumi_api_endpoint') || '';
+    const storedKey = localStorage.getItem('lumi_api_key') || '';
+    if (!storedEndpoint || !storedKey) {
+      playSound('focus');
+      setShowApiKeyPrompt(true);
+      return;
+    }
+
     setIsAiScanning(true);
     playSound('shutter');
     
@@ -1440,6 +1457,8 @@ export default function App() {
           ambientStats,
           preferences,
           simulatedScenario,
+          apiEndpoint: storedEndpoint,
+          apiKey: storedKey,
         }),
       });
 
@@ -2569,6 +2588,48 @@ export default function App() {
           </div>
         );
       })()}
+
+      {/* API Key Required dialog (iOS pop up style) */}
+      {showApiKeyPrompt && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[150] flex items-center justify-center p-6 animate-fade-in text-sans">
+          <div className="bg-white/95 rounded-[32px] max-w-[280px] w-full p-6 text-center shadow-2xl border border-pink-100/50 flex flex-col items-center gap-4 animate-scale-in">
+            <div className="w-12 h-12 rounded-full bg-pink-50 flex items-center justify-center text-[#ff80a3] shadow-inner mb-1">
+              <Sparkles className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-neutral-800 tracking-wide mb-1.5">
+                {isZh ? '开启 AI 追光分析' : 'AI API Config Required'}
+              </h3>
+              <p className="text-[11px] text-neutral-400 leading-normal px-2">
+                {isZh 
+                  ? '请先在「设置」中填写您的 AI 接口信息以使用 AI 补光功能。' 
+                  : 'Please enter your API information in Settings to use AI features.'}
+              </p>
+            </div>
+            <div className="w-full flex flex-col gap-2 mt-2">
+              <button
+                onClick={() => {
+                  playSound('click');
+                  setShowApiKeyPrompt(false);
+                  setCurrentView('settings');
+                }}
+                className="w-full py-2.5 bg-[#ff80a3] hover:bg-[#ff6290] text-white rounded-xl text-xs font-semibold active:scale-95 transition-all cursor-pointer shadow-md shadow-pink-200 select-none border-none"
+              >
+                {isZh ? '去设置 (Go to Settings)' : 'Go to Settings'}
+              </button>
+              <button
+                onClick={() => {
+                  playSound('click');
+                  setShowApiKeyPrompt(false);
+                }}
+                className="w-full py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-500 rounded-xl text-xs font-medium active:scale-95 transition-all cursor-pointer select-none border-none"
+              >
+                {isZh ? '取消 (Cancel)' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

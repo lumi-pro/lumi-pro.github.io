@@ -474,39 +474,43 @@ export default function App() {
     const isNight = currentHour >= 18 || currentHour < 6;
 
     const detectedTime = isNight 
-      ? (isZh ? '深夜夜色 🌌' : 'Late Night 🌌') 
-      : (isZh ? '明净日光 ☀️' : 'Daylight Hour ☀️');
+      ? (isZh ? '暗夜时刻 🌌' : 'Night Scene 🌌') 
+      : (isZh ? '和煦白昼 ☀️' : 'Daylight Hours ☀️');
 
-    // Resolve scenario
+    // Layer 2: Resolve background scenario context types
     let effectiveScenId = simulatedScenario;
     if (effectiveScenId === 'none') {
       if (bright > 165) {
-        effectiveScenId = 'daylight_bright';
+        effectiveScenId = 'daylight_bright'; // Open Outdoor Sunbeams
       } else if (warm > 1.25) {
-        effectiveScenId = bright < 95 ? 'dark_warm' : 'warm_restaurant';
+        effectiveScenId = bright < 95 ? 'dark_warm' : 'warm_restaurant'; // Warm Bedroom vs Cafe/Restaurant
       } else if (warm < 0.88 && bright < 95) {
-        effectiveScenId = 'night_cool';
+        effectiveScenId = 'night_cool'; // Night Street or Dark Balcony
+      } else if (bright < 118) {
+        effectiveScenId = 'dull'; // Grayish white wall room
       } else {
-        effectiveScenId = 'normal';
+        effectiveScenId = 'normal'; // Standard comfortable LED room
       }
     }
 
+    // Layer 1: Person makeup styles from preference
     const makeupStyleZh = preferences.styleMode === 'glamorous' 
-      ? '精致蜜桃腮红妆' 
+      ? '精致心动蜜桃妆' 
       : preferences.styleMode === 'cool_tech' 
-      ? '高级裸感冷调妆' 
-      : '元气日常淡妆';
+      ? '高级无瑕微冷哑光妆' 
+      : '原生清爽空气裸妆';
     const makeupStyleEn = preferences.styleMode === 'glamorous' 
-      ? 'Glamorous peach' 
+      ? 'Vibrant peach glamorous contour' 
       : preferences.styleMode === 'cool_tech' 
-      ? 'Premium cool nude' 
-      : 'Fresh natural light';
+      ? 'Sophisticated chic cool-matte nude' 
+      : 'Fresh minimal dewy bare finish';
 
-    // Core variables
+    // Core variables mapping the 3 upgraded layers
     let presetId = 'cream';
-    let labelZh = '元气提亮';
-    let labelEn = 'Skin Energizer';
+    let labelZh = '元气匀净';
+    let labelEn = 'Skin Perfector';
 
+    // Person layers
     let pSkinTempZh = '';
     let pSkinTempEn = '';
     let pBrightnessZh = '';
@@ -520,6 +524,7 @@ export default function App() {
     let pEyeShadowZh = '';
     let pEyeShadowEn = '';
 
+    // Environment layers
     let bgLampZh = '';
     let bgLampEn = '';
     let bgWallZh = '';
@@ -531,9 +536,9 @@ export default function App() {
     let bgTempZh = '';
     let bgTempEn = '';
 
+    // Reasoning layers
     let stepsZh: string[] = [];
     let stepsEn: string[] = [];
-
     let baseAdviceZh = '';
     let baseAdviceEn = '';
 
@@ -543,352 +548,364 @@ export default function App() {
     let detectedSkin = '';
     let detectedPlace = '';
 
-    // Advanced local AI adaptive matrix matching rules:
+    // Advanced local AI adaptive matrix matching rules incorporating multi-sensor profiles:
     if (effectiveScenId === 'dark_warm' || (ambientStats.isYellowLight && ambientStats.faceBrightness < 100)) {
-      // Rule: 暖黄灯 + 面部暗沉 / Dark Yellow Ceiling Bulbs
-      presetId = 'cream'; // Match Cream Skin for warm dimmer rooms as requested
-      labelZh = '暖黄智能润滑';
-      labelEn = 'Warm Velvet Light';
+      // 1. FIRST LAYER (PERSON): Dull skin + Warm Cast + Under-eye Dark Circles
+      // 2. SECOND LAYER (BG): Warm Yellow bulbs + Wooden accents + Cozy home
+      // 3. SMART DE-DUPLICATION RULE: Background yellow is high, so AVOID sunset/orange lights. Recommend a clarifying neutral 'cream' warmth to avoid over-yellowing!
+      // 4. THIRD LAYER (INTENT): Everyday Cozy Home Soft Focus selfie
+      presetId = 'cream'; 
+      labelZh = '丝滑提亮自适应';
+      labelEn = 'Velvet Contrast';
 
-      pSkinTempZh = '肤色被灯光泛染出重度橘黄，正面缺乏润白光华';
-      pSkinTempEn = 'Complexion heavily yellowed by saturated warm bulb reflects';
-      pBrightnessZh = '光线偏暗，脸颊及额部处于照度欠曝区间';
-      pBrightnessEn = 'Slightly underexposed facial skin details';
-      pShadowsZh = '鼻侧下落形成偏暗的暖调软投影';
-      pShadowsEn = 'Soft downward yellow shadows cast';
-      pDullnessZh = '暗觉明显，熬夜造成的青黄色度堆积，显疲惫';
-      pDullnessEn = 'Low skin transparency with excessive gray/yellow build-up';
-      p3DZh = '面部五官过渡平泛，无充足透光折射度';
-      p3DEn = 'Flat facial contours lacking structured reflections';
-      pEyeShadowZh = '下睑沟部凹陷伴随青黑疲惫眼圈';
-      pEyeShadowEn = 'Pronounced under-eye dark circles and fatigue shadows';
+      pSkinTempZh = '肤色泛黄，暖光在局部产生红热堆积，底气色缺乏剔透透白亮斑';
+      pSkinTempEn = 'Skin is yellowish with warm light overload, lacking cold porcelains';
+      pBrightnessZh = '面庞光感较暗，受杂光倾斜照入影响，面颊受光稍显欠曝';
+      pBrightnessEn = 'Face structure suffers minor underexposure slots';
+      pShadowsZh = '鼻翼及折转轮廓留存有中度温热软阴影';
+      pShadowsEn = 'Soft downward yellow folds near jawlines';
+      pDullnessZh = '因熬夜有些许油脂发黄，伴随面容少许灰沉色块';
+      pDullnessEn = 'Low skin bounce with subtle flat yellow sebum stains';
+      p3DZh = '顶层漫光角度导致五官微微沉闷，阴影起落被吃掉';
+      p3DEn = 'Face depth is slightly flattened by direct ambient bulbs';
+      pEyeShadowZh = '眼底有较显眼下暗沉，面部少许疲态阴网痕迹';
+      pEyeShadowEn = 'Minor dark circles under eyelids from monitor exposure';
 
-      bgLampZh = '检测到强烈的室内硬光及高瓦数暖黄顶灯投射';
-      bgLampEn = 'Cozy high-temperature warm yellow spotlight spill';
-      bgWallZh = '纯白色墙面已被杂光浸染为烛黄色';
-      bgWallEn = 'Plain drywall background stained by gold bulb glow';
-      bgNightZh = '属于中低照度环境或低能见度暗室';
-      bgNightEn = 'Lowlight nighttime warm indoor setting';
-      bgInOutZh = '典型的暖黄高热密闭房间';
-      bgInOutEn = 'Enclosed interior lounge room';
-      bgTempZh = '重度温黄色温 (3200K色温带度)';
-      bgTempEn = 'Extreme warm amber shift (approx 3200K)';
+      bgLampZh = '家中暖白LED吸顶主灯，间歇夹杂周围黄色床头台灯或壁灯';
+      bgLampEn = 'Cozy household ambient LED ceiling bowl combined with yellow spots';
+      bgWallZh = '温润温馨的米黄色墙体质感或居家布艺软夹板背景';
+      bgWallEn = 'Comfortable light yellow wallpaper with warm wood structures';
+      bgNightZh = '属于舒适放松、休憩、安逸的典型居家卧房/客厅场景';
+      bgNightEn = 'Cozy interior bedroom or home workspace backdrop';
+      bgInOutZh = '温馨舒适的室内居家角';
+      bgInOutEn = 'Caring private home bedroom';
+      bgTempZh = '高热温暖黄 (色温约 3200K)';
+      bgTempEn = 'Cozy warm temperature sphere (3200K)';
 
-      baseAdviceZh = '检测到您正处于低亮暖黄光线中，肤色因偏黄黯沉而显得疲态。已自动匹配经典暖白「奶油肌」填充，新增弥散漫反射，温柔抚平颧骨下的细小凹皱，还原元气莹亮！';
-      baseAdviceEn = 'Dim warm lighting detected causing skin dullness. Automatically formulaized iconic cozy "Cream Skin" to offset yellow shadow cast and plump fine cheek contours, granting effortless fresh luster.';
+      baseAdviceZh = '✨ 检测到您处于温馨但偏黄暗淡的居家中。由于环境光偏黄、眼下伴随熬夜暗沉，Lumi 特别避免推荐日落橘等暖色，而是为您定制了「奶油肌」自适应配方。它能深度对冲面色蜡黄、温顺抹平下睑泪沟阴影，一键展现软润剔透的婴儿级原生美肌！';
+      baseAdviceEn = '✨ Cozy yet warm yellow home detected. Since the backdrop already carries heavy yellow casts, Lumi avoided deep oranges and auto-applied clarifying "Cream Skin" instead. It softly neutralizes skin dullness and plumps under-eye dark circles, creating a clean velvety finish.';
 
       stepsZh = [
-        '分析：捕捉到暖黄环境溢散杂光，面色因饱和黄温从而显得晦暗发涩',
-        '识别：面部气色均匀但暗角累积，印入较显疲倦的下睑阴影眼袋',
-        '决策：智能匹配招牌「奶油肌」光晕，中高亮度漫射以轻抚泪沟，抹平毛孔'
+        '第一步【人物特征分析】：侦测到面泛微黄、眼下暗沉泪沟，当前妆容呈现精致暖意。',
+        '第二步【背景场景匹配】：捕捉到温馨居家暖灯及木质背景，环境已严重暖色溢出。',
+        '第三步【自拍意图对冲】：推测为居家放松、生活记录之极简慢意自拍，自动避免推荐暖橘色，极速注入温和「奶油肌」柔和漫补，抚平细小疲态阴影。'
       ];
       stepsEn = [
-        'Analyzed: Ambient saturated with warm spotlight, skin suffers yellow cast and dullness',
-        'Identified: Flat cheek structure with tired under-eye bags cast by direct ceiling beam',
-        'Action: Auto-applied iconic "Cream Skin" setup to fill flat shadows and restore bounciness'
+        'Step 1 [Portrait Analysis]: Yellow skin cast and mild dark circles spotted, featuring fresh dewy makeup.',
+        'Step 2 [Background Scan]: Cozy home yellow bulbs and wooden borders found. Warm hues are already saturated.',
+        'Step 3 [Intent Inference]: Deduced as a cozy home selfie. Stopped Sunset Orange, fitting "Cream Skin" instead to reset gray spots and plump folds.'
       ];
 
-      detectedBright = isZh ? '环境过暖' : 'Ambient Too Warm';
-      detectedWarm = isZh ? '高热温黄' : 'High Warm Amber';
-      detectedBg = isZh ? '橘黄偏偏背景' : 'Yellow Stained Canvas';
-      detectedSkin = isZh ? '暗黄无神且深色黑眼圈' : 'Dull skin & dark eye-bags';
-      detectedPlace = isZh ? '暖温密闭室内' : 'Dim Yellow Indoor';
+      detectedBright = isZh ? '夜色暗光' : 'Cozy Dim Light';
+      detectedWarm = isZh ? '温馨烛光' : 'Warm Orange Cast';
+      detectedBg = isZh ? '温暖舒适居家' : 'Cozy Living Space';
+      detectedSkin = isZh ? '肤色偏黄·眼下暗沉' : 'Warm skin & dark circles';
+      detectedPlace = isZh ? '舒适卧室' : 'Home Bedroom';
 
     } else if (effectiveScenId === 'warm_restaurant') {
-      // Warm Cozy Golden hour or elegant dinner
-      presetId = 'sunset';
-      labelZh = '慵懒焦糖';
-      labelEn = 'Cinematic Sunset';
+      // 1. FIRST LAYER (PERSON): balmy golden-hour skin, glowing peach look
+      // 2. SECOND LAYER (BG): cafe scene, golden wood, romantic lighting
+      // 3. THIRD LAYER (INTENT): Sophisticated Social Share / Dining date, high emotional vibe
+      presetId = 'special_soft_sweet'; // Sweet Peach Special
+      labelZh = '精致名媛蜜桃';
+      labelEn = 'Glamour Peach';
 
-      pSkinTempZh = '蜜桃金黄，折射出温润柔和肤色';
-      pSkinTempEn = 'Stunning honey-peach warm golden undertone';
-      pBrightnessZh = '明暗半交碰，高低光对比充满纵深感';
-      pBrightnessEn = 'Rich contrast with beautiful shadows';
-      pShadowsZh = '鼻侧及骨性曲线过渡饱满柔滑';
-      pShadowsEn = 'Soft organic contoured face lines';
-      pDullnessZh = '润泽清透，面颊气色良好';
-      pDullnessEn = 'Glowing with healthy peach-luster shine';
-      p3DZh = '斜向侧逆光将面部立体骨相完美勾勒';
-      p3DEn = 'Backlight sculpts detailed facial architecture';
-      pEyeShadowZh = '泪沟及青黑眼圈被香槟金暖亮完全淡化';
-      pEyeShadowEn = 'Eye bags naturally blended into warm caramel base';
+      pSkinTempZh = '面庞光感莹润，散发暖杏色泽';
+      pSkinTempEn = 'Sensational warm peach skin luster with golden glow';
+      pBrightnessZh = '采光温和得当，明暗部起伏饱满，骨相十分立体';
+      pBrightnessEn = 'Perfect lighting levels with elegant natural side-shadows';
+      pShadowsZh = '颧骨下方及颚缘分布有轻柔曼妙的修容式微影';
+      pShadowsEn = 'Soft decorative shadows mapping beautiful jawlines';
+      pDullnessZh = '澄澈晶莹，少许水光折射感，神采奕奕';
+      pDullnessEn = 'Plump, glossy skin textures with great emotional vitalities';
+      p3DZh = '面部折线感极佳，配合微侧光源更显立体有致';
+      p3DEn = 'High-fashion dimensional details under warm side keylights';
+      pEyeShadowZh = '眼睑舒展，仅残留淡淡生活正常气色起伏影痕';
+      pEyeShadowEn = 'Inconspicuous shadows smoothly covered by champagne highlights';
 
-      bgLampZh = '餐厅浪漫吊灯、夕阳余晖斜照或优雅蜡烛';
-      bgLampEn = 'Cozy restaurant chandelier or sunset rays';
-      bgWallZh = '奢华木饰面或慵懒褐色质感背景';
-      bgWallEn = 'Wooden textures or warm premium wall finishes';
-      bgNightZh = '属于慢生活的文艺、约会环境';
-      bgNightEn = 'Evening relaxing dining lounge background';
-      bgInOutZh = '中低度暖意饱满室内';
-      bgInOutEn = 'Atmospheric table indoor';
-      bgTempZh = '温馨暖煦区 (2800K~3400K)';
-      bgTempEn = 'Warm cozy restaurant temp (approx 3000K)';
+      bgLampZh = '咖啡馆精致装饰性落地球、慢摇摇曳金光或吊灯';
+      bgLampEn = 'Cozy golden café chandelier or candlelight desk spots';
+      bgWallZh = '经典复古木质家具、咖啡机铜色光泽与皮质靠椅';
+      bgWallEn = 'Elegant restaurant wooden textures and dark leather backs';
+      bgNightZh = '属于充满小资情调、品质约会、午后享受的休闲场景';
+      bgNightEn = 'Romantic cafe or dining table background';
+      bgInOutZh = '充满优雅格调的高端餐饮空间';
+      bgInOutEn = 'Luxury indoor restaurant table';
+      bgTempZh = '温馨暖煦金 (色温约 3000K)';
+      bgTempEn = 'Balmy gold café light (3000K)';
 
-      baseAdviceZh = '您正处于高级温热的电影感夕阳氛围中。无需强行对冲！Lumi 推荐「日落橘」光环，优雅融合侧翼光影，凸显深邃骨相立体感，定格自带情绪氛围的故事大片！';
-      baseAdviceEn = 'Glistening candlelight dining atmosphere detected. Recommends "Sunset Glow" warm aura to gorgeously contour your face, leaving high-fashion cinematic tones with narrative depth.';
+      baseAdviceZh = '✨ 检测到您处于格调极高的咖啡馆/慢餐厅中，当前妆色精美立体。Lumi 智能推断您正在进行富有社交质感的自拍分享！为您特别定制暖甜「柔樱粉黛」氛围，不仅补充气血微红，更能立体塑形咬肌轮廓，定格好感度爆棚的名媛故事感自拍！';
+      baseAdviceEn = '✨ Sophisticated cafe scenery detected with excellent makeup and dimensional skin. Lumi deduced this is a social-sharing self-portrait! We selected sweet velvet "Sweet Peach" fill light to inject a rosy blossom flush on your cheeks, outlining stunning photogenic confidence.';
 
       stepsZh = [
-        '分析：斜向微暖光源烘托，光影质感极其温煦，对比富有戏剧张力',
-        '识别：面部明暗立体过渡饱满，肤色健康富有生气，眼神深邃明亮',
-        '决策：智能适配暖调「日落橘」色谱，微补香槟金高光，雕琢电影格调'
+        '第一步【人物特征分析】：检测到极佳的面庞维度与舒润妆容，面部毫无疲态。',
+        '第二步【背景场景匹配】：定位到咖啡厅/精致宴会现场、极富格调之暖香香槟背景。',
+        '第三步【自拍意图对冲】：推测为高端社交分享、好友聚会自拍大片，自动选用特调「柔樱粉黛」蜜温渲染，完美提亮瞳孔，流溢迷人亮眸。'
       ];
       stepsEn = [
-        'Analyzed: Beautiful diagonal warm glow, creating artistic highlights and contours',
-        'Identified: Plump warm lip-cheek tone with clear contour lines, minimal fatigue',
-        'Action: Fitted peach-orange "Sunset Glow" style to expand modern retro film warmth'
+        'Step 1 [Portrait Analysis]: Brilliant face shape and gorgeous lip-cheek tone detected with zero fatigue.',
+        'Step 2 [Background Scan]: Refined cafe or upscale dining lobby with warm champagne glitz.',
+        'Step 3 [Intent Inference]: Inferred as a classy social sharing snapshot. Programmed sweet "Sweet Peach" spectrum to enrich peach undertones and light up pupils.'
       ];
 
-      detectedBright = isZh ? '温馨明和' : 'Cozy Light';
-      detectedWarm = isZh ? '暖棕焦糖' : 'Warm Golden Cast';
-      detectedBg = isZh ? '奢雅暖色背景' : 'Ambiance Gold Backdrop';
-      detectedSkin = isZh ? '莹润立体' : 'Moisturized & sculpted';
-      detectedPlace = isZh ? '格调餐厅' : 'Premium Lounge';
+      detectedBright = isZh ? '暖意适中' : 'Cozy Warm Light';
+      detectedWarm = isZh ? '暖光蜜金' : 'Glistening Amber';
+      detectedBg = isZh ? '艺术格调咖啡厅' : 'Aesthetic Café Background';
+      detectedSkin = isZh ? '红润通透·骨相立体' : 'Dewy peach & sculpted';
+      detectedPlace = isZh ? '高格调慢空间' : 'Vivid Restaurant';
 
     } else if (effectiveScenId === 'night_cool' || (isNight && ambientStats.bgBrightness < 80)) {
-      // Rule: 夜晚 + 深色/黑背景 / Night + Dark Background
-      presetId = 'moonlight'; // Moonlight Blue
-      labelZh = '眼神流盼';
-      labelEn = 'Eye Sparkle';
+      // 1. FIRST LAYER (PERSON): cold dark blue casting, face obscured, dark circles pronounced
+      // 2. SECOND LAYER (BG): midnight dark, balcony/street scene, deep indigo sky
+      // 3. THIRD LAYER (INTENT): Atmospheric Midnight Portrait / Deep Mood Shot
+      presetId = 'special_ambient_mood'; // Velvet Mood Special
+      labelZh = '幽谧微醺霓虹';
+      labelEn = 'Aesthetic Neon';
 
-      pSkinTempZh = '背光处于极冷深邃的蓝灰色底色';
-      pSkinTempEn = 'Deep night cobalt blue skin undertone';
-      pBrightnessZh = '极暗环境，面容大面积融入黑夜不可见';
-      pBrightnessEn = 'Deep night shadows, face severely obscured';
-      pShadowsZh = '深重灰黑色遮盖了脸颊两侧与额骨';
-      pShadowsEn = 'Massive shadow blocks under brows and chin';
-      pDullnessZh = '极度欠缺发光度，眼神无神、皮层干燥发灰';
-      pDullnessEn = 'Deprived of skin vitality, gaze looks quiet/dim';
-      p3DZh = '面部五官轮廓在黑暗混沌中难以分辨';
-      p3DEn = 'Face shapes lack edge definition and contrast';
-      pEyeShadowZh = '眼下方带有大范围幽黑熬夜黑眼圈及泪痕影';
-      pEyeShadowEn = 'Pronounced dark blue fatigue circles';
+      pSkinTempZh = '背光笼罩于极冷深夜幽暗中，肤质折射清冷微蓝';
+      pSkinTempEn = 'Deep night cobalt blue skin background and low face lux';
+      pBrightnessZh = '光感极为稀缺，面颊在黑暗阴影中缺失反射层次';
+      pBrightnessEn = 'Extremely low lighting, facial details slightly obscured';
+      pShadowsZh = '深重的黑曜石暗影全面压迫额骨及唇周两侧';
+      pShadowsEn = 'Heavy graphite-colored shadow blocks on the temples';
+      pDullnessZh = '肤色处于夜色疲倦底调，气色黯淡无光，略发灰涩';
+      pDullnessEn = 'Low skin bounce under cool dark sky, eyes look dim';
+      p3DZh = '面部骨骼线条完全淹没在暗光中，失去明显长宽透度';
+      p3DEn = 'Facial lines lack contour definition and boundary separation';
+      pEyeShadowZh = '眼下方伴随极显眼的熬夜重影，泪痕暗沉随低照度加重';
+      pEyeShadowEn = 'Strong under-eye shadows reflecting late-night fatigue';
 
-      bgLampZh = '深夜幽冷微光，仅远处楼亮有散漫光点';
-      bgLampEn = 'Faint twilight or distant window reflections';
-      bgWallZh = '幽深窗外天空、露台深夜壁色或漆黑暗角';
-      bgWallEn = 'Plain pitch black open-air background';
-      bgNightZh = '典型的深夜或处于极低照度的静谧暗夜';
-      bgNightEn = 'Midnight hours with zero solar light';
-      bgInOutZh = '深夜室外阳台或无灯封闭暗室';
-      bgInOutEn = 'Midnight outdoor block or pitch dark bedroom';
-      bgTempZh = '清冷冰蓝色段 (7500K色温频)';
-      bgTempEn = 'Deep blue cool temperature range (approx 7500K)';
+      bgLampZh = '远处闪烁的道路霓虹、散漫高层夜景星点灯斑或月牙光晕';
+      bgLampEn = 'Distant urban sodium street lamps and neon bokeh glow';
+      bgWallZh = '沉寂墨蓝的室外长空、暗色雕护栏或高空露天落地玻璃';
+      bgWallEn = 'Dark twilight sky or plain midnight glass balcony backdrop';
+      bgNightZh = '属于静谧黑夜、城市午夜露台或寂静户外夜生活环境';
+      bgNightEn = 'Typical dark outdoor city-view balcony setting';
+      bgInOutZh = '视野宏大的深夜城市高空阳台';
+      bgInOutEn = 'Deep night open terrace';
+      bgTempZh = '冰冷太空高阶蓝 (色温约 7500K)';
+      bgTempEn = 'Midnight icy indigo tone (7500K)';
 
-      baseAdviceZh = '当前处于深夜幽静的黑色背景中。强拉耀眼白光会晃眼且易使脸部泛油。Lumi 已自动为您匹配微蓝色温「月光蓝」极简轻柔补光，消减眼周暗斑，瞬间给清暗中闪亮出夺目的澄澈眼神光！';
-      baseAdviceEn = 'Midnight darkness and dark backing detected. Lumi avoided stark blinding flash and instantly applied serene "Moonlight Blue" soft ambient aura to eliminate dark shadows and lock sparkling bright eyes.';
+      baseAdviceZh = '✨ 您正处于极具故事张力的深夜夜色中。直接照白光不仅会刺眼、更是会破坏夜视背景。Lumi 智能推测您正打算记录一张充满呼吸感的主题自拍！我们定制了霓虹极品「霓虹夜幕」特调补光，在脸颊晕染浅微醺粉紫亮痕，去处黑眼圈，双眼爆发出极致迷离的焦点光晕！';
+      baseAdviceEn = '✨ Mystical city nightscape detected. Shooting stark white flash would wash out this gorgeous skyline and blind you. Lumi deduced this is an ambient night mood self-portrait! We deployed fancy neon "Velvet Mood" fill: rendering cozy twilight violet highlights on your cheekbones, instantly erasing late-night shadow.';
 
       stepsZh = [
-        '分析：深夜极暗幽闭冷色底调覆盖，眼神暗淡，照度逼近弱光极限',
-        '识别：面面部细节多陷于背景黑暗中，由于微弱照度使双目泪沟黑圈增加',
-        '决策：注入温和不晃眼的「月光蓝」浅幽微光，消除疲倦，定格星点闪烁眼神光'
+        '第一步【人物特征分析】：侦测到肌肤暗黑失光、受暗处黑眼圈困扰，冷蓝底影遮挡五官。',
+        '第二步【背景场景匹配】：定位至开阔都市夜景地，环境充满大面积夜幕深蓝，具有稀落点光源。',
+        '第三步【自拍意图对冲】：推测为深夜质感氛围自拍、情绪肖像记录，自动加载「霓虹夜幕」霓紫与极曜金辉交融，对冲暗沉，渲染夜色璀璨眼神。'
       ];
       stepsEn = [
-        'Analyzed: Low ambient night, background fully obscured by deep indigo space',
-        'Identified: Facial borders lost in darkness, dark circles exacerbated by high contrast',
-        'Action: Overlayed organic soft-blue "Moonlight" gradient to illuminate beautiful eyes'
+        'Step 1 [Portrait Analysis]: Deep dark eye circles and heavy shadow blocks caused by dim night lighting.',
+        'Step 2 [Background Scan]: Pitch dark terrace space surrounded by majestic twilight cobalt skyline.',
+        'Step 3 [Intent Inference]: Inferred as a late-night artistic aesthetic portrait. Avoided generic white flash, overlaying cozy "Velvet Mood" purple highlights for cinema vibes.'
       ];
 
-      detectedBright = isZh ? '夜幕低能' : 'Midnight Dark';
-      detectedWarm = isZh ? '幽凉蓝调' : 'Cool Blue Temp';
-      detectedBg = isZh ? '漆黑长空' : 'Pitch Black Background';
-      detectedSkin = isZh ? '晦暗失神，色度发黑' : 'Obscured & tired eyes';
-      detectedPlace = isZh ? '幽美深夜' : 'Midnight Space';
+      detectedBright = isZh ? '夜景光寂' : 'Midnight Low Lux';
+      detectedWarm = isZh ? '荧虹深蓝' : 'Neon Cobalt Blue';
+      detectedBg = isZh ? '幽密都市夜景' : 'Urban Skyline Lights';
+      detectedSkin = isZh ? '清暗无光·黑眼圈明显' : 'Obscured & tired gaze';
+      detectedPlace = isZh ? '高空露天露台' : 'Night Open Balcony';
 
     } else if (effectiveScenId === 'dull' || (ambientStats.bgBrightness > 140 && ambientStats.faceBrightness < 115)) {
-      // Rule: 白墙 + 面部偏灰 / Off-white Wall + Grayish Face
-      presetId = 'cold'; // Soft Fill White
-      labelZh = '白净去灰';
-      labelEn = 'Immaculate White';
+      // 1. FIRST LAYER (PERSON): Warmth/coolness yellowish skin, face dullness with grayish casts
+      // 2. SECOND LAYER (BG): White walls, office lighting, bland backdrops reflecting cold fluorescence
+      // 3. SMART DE-DUPLICATION RULE: White wall environment reflects cold dull gray, so we give cold Porcelain white to counter yellowish skin, OR we boost anti-dullness teal-mint!
+      // 4. THIRD LAYER (INTENT): Work/Daily commute, clearing office fatigue
+      presetId = 'special_cold_white'; // Porcelain Cool特调
+      labelZh = '冰透去黄特调';
+      labelEn = 'Porcelain Cool';
 
-      pSkinTempZh = '白皙偏冷灰，底色稍显苍白，无血色';
-      pSkinTempEn = 'Pale neutral-cool skin base with flat grey undertone';
-      pBrightnessZh = '采光平温，但皮层细胞缺少通透透亮的光华';
-      pBrightnessEn = 'Moderate light but skin is plain and dull';
-      pShadowsZh = '鼻侧下部分布着少许细散平铺的浅灰色阴影';
-      pShadowsEn = 'Minor flat grayish facial shadow traces';
-      pDullnessZh = '熬夜微现，面泛青灰，细胞饱满度低下';
-      pDullnessEn = 'Slightly fatigued skin with low luster density';
-      p3DZh = '白平漫射使五官缺乏雕琢比例，有些扁平';
-      p3DEn = 'Flat face under uniform diffusion';
-      pEyeShadowZh = '眼下方分布有淡淡的青蓝色疲惫眼袋';
-      pEyeShadowEn = 'Slightly bluish tired bags under eyelids';
+      pSkinTempZh = '肤质带有熬夜泛黄、底色青灰，通透度随荧光管平照下降';
+      pSkinTempEn = 'Complexion is yellowish-gray with flat room textures';
+      pBrightnessZh = '采光均匀分布，但主体面颊呈疲倦哑光，高光泽缺乏气血张力';
+      pBrightnessEn = 'Uniform light levels but face skin is dry and dull';
+      pShadowsZh = '眼角下方与鼻基底深处投射有细长浅灰暗影';
+      pShadowsEn = 'Acast of minor tired lines around base of noise';
+      pDullnessZh = '油脂氧化引起的黄绿感，伴随办公屏显长期辐射带来的灰冷光';
+      pDullnessEn = 'Low transparency and flat yellow sebum spots due to screen glares';
+      p3DZh = '面部折角在纯白发散光源中略显平扁，缺乏错落有致的维度';
+      p3DEn = 'Flat facial contours caused by multi-angle reflection';
+      pEyeShadowZh = '眼下方散落明显色斑与浅暗泪沟暗印';
+      pEyeShadowEn = 'Bluish gray shadows and noticeable monitor-fatigue fatigue lines';
 
-      bgLampZh = '大面积白色荧光管扩散，无明显投影反光';
-      bgLampEn = 'Diffuse standard white ceiling tubelight';
-      bgWallZh = '白色亚光漆普通粉刷墙，大范围折射回冷光';
-      bgWallEn = 'Plain white drywall background reflecting colder bounce';
-      bgNightZh = '中规中矩的平常多云白天或明亮室内角';
-      bgNightEn = 'Daytime interior with light gray shadow base';
-      bgInOutZh = '常规中等照度的白皙写字楼/客厅';
-      bgInOutEn = 'Standard office desk workspace';
-      bgTempZh = '中性偏白日光 (5600K~6000K)';
-      bgTempEn = 'Standard cool balanced light (approx 5800K)';
+      bgLampZh = '大面积方形嵌入式白色荧光灯框或白色吸顶灯条';
+      bgLampEn = 'Diffuse corporate white overhead office fluorescent tube grids';
+      bgWallZh = '纯白色光滑普通石膏粉刷墙，反射大量冷色散漫杂影';
+      bgWallEn = 'Plain matte-white drywall background bouncing monotonic cold grays';
+      bgNightZh = '属于专注、高能、理性的办公室工作间或标准居家自学室';
+      bgNightEn = 'Daytime office workplace or simple clinical white-collar study room';
+      bgInOutZh = '典型的明亮浅色写字楼办公桌';
+      bgInOutEn = 'Office desk corporate room';
+      bgTempZh = '中性冷硬白 (色温约 5800K)';
+      bgTempEn = 'Clinical fluorescent cool white (5800K)';
 
-      baseAdviceZh = '当前大面积白墙反光导致面部略显疲倦灰涩。已经自动为您调配冰透「冷白皮」补调，智能对冲灰调，提拉面部边缘亮斑，瞬间打造极富通透润泽感的高清瓷白颜！';
-      baseAdviceEn = 'Flat off-white background and light gray cast detected. Lumi designed crispy white "Soft Fill White" setup to filter out secondary gray cast and plump cheek highlights, achieving a premium porcelain luster.';
+      baseAdviceZh = '✨ 监测到您在办公室白墙或荧光灯下，极易拍出蜡黄和黯淡疲倦。Lumi 推断您想拍一张元气充足、摆脱办公疲劳的自拍！鉴于环境冷白平淡、皮肤带暗黄，我们特别定制了主力「清冽瓷白」特调，对冲蜡黄泛油，让皮肤如同刚做完密集敷水，瞬间焕发冰润冷白的名媛肤感！';
+      baseAdviceEn = '✨ Clinical white office walls and fluorescents detected, causing a tiresome yellow-gray skin tone. Lumi inferred you are in a professional daily commute mood! We calibrated a customized "Porcelain Cool" icy-blue white filter. It completely counteracts yellow skin sebum and purifies tired eyes in one click.';
 
       stepsZh = [
-        '分析：四周受大面积纯白墙反射冷感，肤色缺乏自然红润气血色调',
-        '识别：面色在室内反平光下微现灰度无神，眼睑下方呈细微泪痕阴影',
-        '决策：自适应调入剔透冷感「冷白皮」高柔补光，清除暗灰色素，透射白皙白瓷底光'
+        '第一步【人物特征分析】：侦测到皮脂微泛黄、脸颊伴随少许暗灰色块，眼底略带工作疲惫。',
+        '第二步【背景场景匹配】：捕捉到大平荧光管及白墙反光环境，背景已存在高亮度冷灰色调。',
+        '第三步【自拍意图对冲】：推测为高频日常通勤、精神气色状态恢复之瞬间记录，选用高精「清冽瓷白」滤除灰暗杂色，拉开水光透明感。'
       ];
       stepsEn = [
-        'Analyzed: Large off-white surface casting monotonic white light, causing flat grey tint',
-        'Identified: Complexion is slightly pale with flat cheek structures and minor fatigue',
-        'Action: Loaded porcelain blue-white "Ice White" spectrum to erase grayish dust'
+        'Step 1 [Portrait Analysis]: Fatigued skin tones with slight yellow sebum oxidation and screen-glared eye bags.',
+        'Step 2 [Background Scan]: Plain matte-white office plaster backing casting flat shadows.',
+        'Step 3 [Intent Inference]: Inferred as a workday daily commute profile refresh. Deployed Porcelain Blue-White filter "Porcelain Cool" to override yellowing aspects.'
       ];
 
-      detectedBright = isZh ? '光影平灰' : 'Grayish Light';
-      detectedWarm = isZh ? '中冷淡色' : 'Cool Balanced Temp';
-      detectedBg = isZh ? '白净反射背景' : 'White Drywall Backdrop';
-      detectedSkin = isZh ? '因熬夜有些许发青发灰' : 'Fatigued & Grayish';
-      detectedPlace = isZh ? '常规明亮室内' : 'Standard Workspace';
+      detectedBright = isZh ? '平光冷白' : 'Flat White Light';
+      detectedWarm = isZh ? '冷淡中性' : 'Clinical Cool Temp';
+      detectedBg = isZh ? '高反射纯浅背景' : 'White Office Wall';
+      detectedSkin = isZh ? '蜡黄暗灰且现疲惫' : 'Yellowish-gray & tired screen face';
+      detectedPlace = isZh ? '办公大楼办公桌' : 'Corporate Desk';
 
     } else if (effectiveScenId === 'daylight_bright') {
-      // Outdoor Sunlight
-      presetId = 'love';
-      labelZh = '红润防暴';
-      labelEn = 'Rosy Protection';
+      // 1. FIRST LAYER (PERSON): sun-washed, extreme sun reflection
+      // 2. SECOND LAYER (BG): open air, daylight, greenery
+      // 3. THIRD LAYER (INTENT): active outdoor sharing, vitalities
+      presetId = 'love'; 
+      labelZh = '气血填充防御';
+      labelEn = 'Blush Protection';
 
-      pSkinTempZh = '极高饱和日光配比红润肌肤';
-      pSkinTempEn = 'Extremely high brightness natural skin frame';
-      pBrightnessZh = '正面直射采光明艳过载，接近极值曝光';
-      pBrightnessEn = 'Abundant glare near overexposure scale';
-      pShadowsZh = '鼻梁骨架及眼窝带有硬朗的烈日硬影';
-      pShadowsEn = 'Harsh solar peak spot glare';
-      pDullnessZh = '润度通透，但光色因极强天偏平淡';
-      pDullnessEn = 'Outstanding clarity with glowing high key skin textures';
-      p3DZh = '极硬的大平光会压缩面骨的左右向侧翼，有些扁平';
-      p3DEn = 'Strong solar direct light slightly flattens nasal bridge';
-      pEyeShadowZh = '泪痕及细小眼圈被暴晒天光完全吞噬消失';
-      pEyeShadowEn = 'Eye shadows fully washed out by sunbeams';
+      pSkinTempZh = '高光晶透白里透红，日晒反光率极高';
+      pSkinTempEn = 'Healthy vibrant outdoor skin reflection under full sun';
+      pBrightnessZh = '采光超载充充盈，面颊被金熙日光强烈直晒';
+      pBrightnessEn = 'High-level solar lighting close to overexposure scale';
+      pShadowsZh = '鼻梁及睫毛等部分在直射下，投下细尖硬影子';
+      pShadowsEn = 'Sharp solar peak point shadows near cheek contours';
+      pDullnessZh = '极其通透，角质清澈干净，唯独正面略微高光泛白';
+      pDullnessEn = 'Outstanding clarity with glowing textures but raw color washed out';
+      p3DZh = '极硬的大平光将面部起伏压平，部分暗部比例流失';
+      p3DEn = 'Strong vertical sunbeams flatten dynamic jaw contours';
+      pEyeShadowZh = '眼下方泪沟阴影已被亮眼太阳直晒消融、干净亮丽';
+      pEyeShadowEn = 'Eye lines and dark circles completely washed out by daylight';
 
-      bgLampZh = '户外烈日当天或大空域极亮天光';
-      bgLampEn = 'Open air sky sunbeams beaming';
-      bgWallZh = '亮色建筑表面或繁茂户外绿植';
-      bgWallEn = 'Glistening garden or concrete backdrop';
-      bgNightZh = '典型的烈日高照白昼';
-      bgNightEn = 'Bright daytime midday hours';
-      bgInOutZh = '视野空旷无阻的户外开阔处';
-      bgInOutEn = 'Open natural outdoor environment';
-      bgTempZh = '纯净室外耀日光度 (5800K太阳光谱格)';
-      bgTempEn = 'Natural solar color temp (5800K)';
+      bgLampZh = '天幕湛蓝开阔、烈日高空斜射或耀目自然日光照耀';
+      bgLampEn = 'Open daylight sun or natural sky sunbeams';
+      bgWallZh = '室外开阔建筑剪影、茂盛绿叶植物背景或公园露天长凳';
+      bgWallEn = 'Glistening tree leaves or concrete outdoor park silhouettes';
+      bgNightZh = '典型的晴朗假日、徒步、野餐等户外旅行自拍场景';
+      bgNightEn = 'Sunny afternoon outdoor recreation backdrop';
+      bgInOutZh = '视野空旷、采光极大的野外自然场域';
+      bgInOutEn = 'Open natural outdoor location';
+      bgTempZh = '纯净金色烈日光 (色温约 5800K)';
+      bgTempEn = 'Natural solar glare temp (5800K)';
 
-      baseAdviceZh = '当前户外日光照度极高。猛烈暴晒容易使自拍丧失气血红润。Lumi 自动配对了甜雅「初恋粉」红晕填充，融一层梦幻少女绯红，平顺强光过載，直出桃花气色！';
-      baseAdviceEn = 'Extreme solar daylight detected. Heavy sunlight can wash out blush depth. Lumi matched cozy redish "First Love" light profile to absorb wild glitter and outline a beautiful fresh pink flush.';
+      baseAdviceZh = '✨ 您正处于高亮开阔的户外艳阳下。强烈的暴晒虽亮，但极易将面颊的自然气红晕晒化或漂白。Lumi 智能推荐唯美的「初恋粉」红晕填充方案，在您面颊轻轻盖一层梦幻粉嫩的桃色保护伞，对冲生硬白暴，瞬间锁住元气满满的少女粉颊！';
+      baseAdviceEn = '✨ Sunny bright outdoors detected. Massive daylight can bleach your face and wash away your natural blushes. Lumi recommended pink-soft "First Love" schema, adding an artistic peach rose filter to absorb the raw glare and lock in a beautiful healthy flush.';
 
       stepsZh = [
-        '分析：强烈原生日光由外直入，画面光亮饱和度过高，易显扁平',
-        '识别：肤质晶透但气血缺失，暴晒日光导致双颊对比单一而没有红润度',
-        '决策：自动开启「初恋粉」樱粉补光，中和生硬暴晒，打造柔亮好气色桃花脸'
+        '第一步【人物特征分析】：检测到极高照度下皮肤充盈白里透红，面容略有暴晒漂白感。',
+        '第二步【背景场景匹配】：定位至极高采光的户外野外长廊，阳光和绿化呈现出饱和暖色。',
+        '第三步【自拍意图对冲】：推测为旅游博主分享、假日踏青打卡之户外运动自拍，自动选用红晕色系「初恋粉」舒展气色，防御烈日过曝扁平感。'
       ];
       stepsEn = [
-        'Analyzed: Abundant sunlight flowing into lens, close to solar over-illumination',
-        'Identified: Skin is translucent but flat, losing sweet flush profile properties',
-        'Action: Loaded cozy sweet "First Love" schema to blend down harsh glares, depositing a fresh rose glow'
+        'Step 1 [Portrait Analysis]: Highlight overload, skin is clear but base colors look washed out by white glare.',
+        'Step 2 [Background Scan]: Dynamic vibrant outdoors under extreme daylight brightness.',
+        'Step 3 [Intent Inference]: Inferred as a holiday outdoor vlog snap. Deployed sweet rosy "First Love" to absorb harsh solar glare and build smooth rosy depth.'
       ];
 
-      detectedBright = isZh ? '光照极硬' : 'Solar Glaring';
-      detectedWarm = isZh ? '金煦天光' : 'Sunlight Balanced';
-      detectedBg = isZh ? '开阔自然背景' : 'Vibrant Outdoor Backdrop';
-      detectedSkin = isZh ? '采光充盈，略干' : 'High sun reflection';
-      detectedPlace = isZh ? '野外晴空户外' : 'Sunny Outdoor Arena';
+      detectedBright = isZh ? '日光刺射' : 'Vibrant Sunbeam';
+      detectedWarm = isZh ? '天然灼璨' : 'Solar Golden Glow';
+      detectedBg = isZh ? '开阔大自然背景' : 'Vibrant Greenery Background';
+      detectedSkin = isZh ? '照度盈溢·高光偏白' : 'Clear & slight sun-washed';
+      detectedPlace = isZh ? '公园等露天场所' : 'Sunny Outdoor Area';
 
     } else {
-      // Normal Comfortable Balanced Room Daylight
+      // Normal Comfortable Balanced Room Daylight (fallback of fallbacks)
       presetId = 'cream';
-      labelZh = '天生好感';
-      labelEn = 'Natural Smooth';
+      labelZh = '原生本色水感';
+      labelEn = 'Natural Dewy';
 
-      pSkinTempZh = '适中温顺，暖白色泽，最衬肤质';
-      pSkinTempEn = 'Comfortable neutral-warm peach frame';
-      pBrightnessZh = '采光和谐，面庞细节饱满得当';
-      pBrightnessEn = 'Perfect skin illumination density';
-      pShadowsZh = '鼻侧和咬肌边缘存在柔和过渡的微弱阴影';
-      pShadowsEn = 'Soft natural standard facial shadows';
-      pDullnessZh = '皮表细节柔顺，携带极薄的室内沉闷感';
-      pDullnessEn = 'Slight natural flat gray in standard room';
-      p3DZh = '五官比例工整，光影折射均称';
-      p3DEn = 'Symmetric facial depth, regular shadow layers';
-      pEyeShadowZh = '眼下方带有轻微的生活正常生活阴网影';
-      pEyeShadowEn = 'Inconspicuous gentle shadow path under eyes';
+      pSkinTempZh = '白净自然，肤温在最佳清亮水准，极其衬底容肌理';
+      pSkinTempEn = 'Flawless balanced skin temperature with great nude finish';
+      pBrightnessZh = '采光温和、面部的黑白细节过渡得体、自然可人';
+      pBrightnessEn = 'Perfect and pleasing room light saturation levels';
+      pShadowsZh = '颧下两侧分布微弱、柔和流转的自然阴部线条';
+      pShadowsEn = 'Soft barely-there shadows tracing regular face arcs';
+      pDullnessZh = '角质润泽通透，仅略带有普通客房之浅平平淡感';
+      pDullnessEn = 'Clear translucent skin layers with standard flat light gray';
+      p3DZh = '面庞比例整齐，轮廓在线条漫射下极其饱满对称';
+      p3DEn = 'Perfect facial symmetry with healthy glowing contours';
+      pEyeShadowZh = '眼下方基本处于自然明亮、生活性微褶痕迹';
+      pEyeShadowEn = 'Minor standard eyelid shadows easily blended out';
 
-      bgLampZh = '室内吸顶LED暖白灯，柔宜宜人';
-      bgLampEn = 'Cozy LED ceiling illumination';
-      bgWallZh = '干净舒适的米白色普通居家客厅粉刷墙';
-      bgWallEn = 'Plain home light-beige interior apartment wallpaper';
-      bgNightZh = '和煦光度，百搭居家的自拍场景';
-      bgNightEn = 'Gentle home window shade daytime backdrop';
-      bgInOutZh = '常规客厅或卧室内写字台';
-      bgInOutEn = 'Sober interior house room';
-      bgTempZh = '和顺家用色温频 (4500K和润白)';
-      bgTempEn = 'Balanced comfortable room temperature (4500K)';
+      bgLampZh = '室内温和白光LED天花吸顶板灯，光能分布非常均顺高雅';
+      bgLampEn = 'Soft corporate or home LED panel casting evenly balanced glow';
+      bgWallZh = '整洁轻奢的纯白乳胶粉刷墙或清爽白色落地推拉玻璃框窗';
+      bgWallEn = 'Clean white smooth plaster drywall and large clear sliding windows';
+      bgNightZh = '属于最百搭、最多功能的常规日间居家、小憩或自拍姿态场景';
+      bgNightEn = 'Comfortable daytime balanced room backdrop';
+      bgInOutZh = '常规光源充足、安静整洁的房中写字桌';
+      bgInOutEn = 'Quiet indoor desk room';
+      bgTempZh = '和煦健康白 (色温约 4500K)';
+      bgTempEn = 'Neutral comfortable white temp (4500K)';
 
-      baseAdviceZh = '当前室内采光均匀协调。Lumi 为您推荐招牌「奶油肌」温润柔光，轻轻拉平您颧骨下方隐隐的微弱阴影。一键拍摄，肤色白润如细腻羊脂，展现毫无粉感的天生好底子！';
-      baseAdviceEn = 'Comfortable uniform indoor light detected. Recommends Warm-Soft "Cream Skin" to erase micro nostril lines and cast beautiful warm lusters, rendering healthy natural portrait looks.';
+      baseAdviceZh = '✨ 当前空气采光极佳、面庞自带温顺立体的对称光影。Lumi 推断您这是一次轻松的居家记录自拍。为您匹配经典柔亮「奶油肌」填充，去除嘴角唇边细小纹路、提拉卧蚕水光感。在无粉感干扰的同时，直出高清原生肌！';
+      baseAdviceEn = '✨ Balance is amazing with natural uniform window light. Lumi deduced this is a cozy daytime portrait snap. We suited our signature velvet "Cream Skin" preset. It subtly plumps and erases any minor facial corners without caking, presenting clear high-definition skin.';
 
       stepsZh = [
-        '分析：捕捉到能量均衡、照度适中的居家LED天窗，光斑偏色正常',
-        '识别：面部骨相饱满契合，仅唇下 and 眼睑带有一些轻微的重力软影',
-        '决策：极速采用「奶油肌」自适应光辉，温润抚平毛孔，立显软嫩原生肌'
+        '第一步【人物特征分析】：侦测到极均匀完美的采光结构与饱满神采，气色透亮水润。',
+        '第二步【背景场景匹配】：捕捉到照度平衡之采光舒适室内，偏白米色背景干净极简。',
+        '第三步【自拍意图对冲】：推测为生活日常性随手自拍、简约状态定格，自动采用标杆「奶油肌」柔和赋亮，打造水光绒雾名媛颜。'
       ];
       stepsEn = [
-        'Analyzed: Balanced cozy ceiling lamp captured, color spectrum is clean and normal',
-        'Identified: Symmetrical skin contour lines with typical micro face corner creases',
-        'Action: Fitted premium "Cream Skin" preset to cast gorgeous velvet pearl luster'
+        'Step 1 [Portrait Analysis]: Harmonious facial distribution, healthy moisture, and zero screen fatigue.',
+        'Step 2 [Background Scan]: Simple interior room with comfortable neutral-white brightness.',
+        'Step 3 [Intent Inference]: Inferred as a relaxed daily self-capture. Selected "Cream Skin" to lock raw elegance.'
       ];
 
-      detectedBright = isZh ? '照度均衡' : 'Uniform Ambient';
-      detectedWarm = isZh ? '温和中润' : 'Neutral Temperature';
-      detectedBg = isZh ? '日常居家背景' : 'Cozy Living Backdrop';
-      detectedSkin = isZh ? '均衡透水状态' : 'Healthy balanced skin lusters';
-      detectedPlace = isZh ? '匀净舒适室内' : 'Cozy Indoor Space';
+      detectedBright = isZh ? '温和采光' : 'Uniform Daylight';
+      detectedWarm = isZh ? '均衡温白' : 'Balanced White';
+      detectedBg = isZh ? '简约整洁室内' : 'Plain Indoor Canvas';
+      detectedSkin = isZh ? '清润红晕·通透有度' : 'Pristine & healthy';
+      detectedPlace = isZh ? '明亮起居室' : 'Vibrant Indoor Room';
     }
 
-    // 3. Apply User Design Bias Overlay!
+    // 3. Apply User Design Bias Overlay / Habits & Memory Integration!
     let memoryEffect = '';
     const favPreset = FILL_LIGHT_PRESETS.find(p => p.id === preferences.favoritePresetId);
     const favName = favPreset ? (isZh ? favPreset.name : favPreset.englishName) : '';
 
-    if (preferences.styleMode === 'cool_tech' && presetId !== 'cold' && presetId !== 'moonlight') {
-      presetId = 'cold';
-      baseAdviceZh = `【已结合习惯矫正】感应到您近期在 Lumi 偏爱「高级冷色」冷系自拍，AI 已自动将补发光谱向「冷白皮」偏置。咔嚓一瞬间，去除灰黄杂痕，定格极致冷白名媛脸！`;
-      baseAdviceEn = `[Aesthetic Bias Applied] Knowing your signature taste is cool-toned, Lumi automatically calibrated recommendation to ice-light "Ice White" active filter, filtering warm environment stains.`;
-      memoryEffect = isZh ? '✦ 已结合近期偏好：自动偏置为高级冷白皙补光' : '✦ Balanced for Cold High-Fashion preference';
+    if (preferences.styleMode === 'cool_tech' && presetId !== 'cold' && presetId !== 'special_cold_white' && presetId !== 'moonlight') {
+      presetId = 'special_cold_white';
+      baseAdviceZh = `✨ 【Lumi 已结合近期习惯】检测到您爱用「高级冷色」冷系冷妆。AI 已自动将补发光谱向「清冽瓷白」特调偏移：它能神奇对冲环境中残留的所有油黄和肤灰。眨眼一下，拍出极致白皙的名媛清冷美颜！`;
+      baseAdviceEn = `✨ [Habits Tuned] Knowing your aesthetic style matches cold tones, Lumi calibrated suggestion to icy cool "Porcelain Cool", filtering secondary yellow stains and locking crisp chic complexions.`;
+      memoryEffect = isZh ? '✦ 已融入您近期的「高级冷色」自拍美学习惯：偏置清冷高亮配方' : '✦ Style Bias adjusted to high-fashion Cool White';
 
       stepsZh = [
         stepsZh[0],
-        isZh ? '💡 【习惯激活】检测到您高频点击应用「高级冷色」自拍美感习惯' : '💡 [Bias Active] User loves cold high-fashion photo style',
-        isZh ? '配方自动向「冷白皮」温润修正，多层叠加浅晶亮瓷蓝光谱对冲昏暗' : 'Shifted target palette to crisp "Ice White" filler to satisfy cool-tone elegance styling'
+        isZh ? '💡 【习惯融合】：激活您爱用「高级冷色」冷肌冷白自拍之个性惯用倾向。' : '💡 [Bias Active]: Loving cold chic photography signature style.',
+        isZh ? '对冲补光配方自动由温热转换至「清冽瓷白」冰晶光谱，抚平唇下一抹细痕，拉高额角透析瓷感。' : 'Shifted default suggestion to cold "Porcelain Cool" fill light to optimize ice skin clarity.'
       ];
       stepsEn = [
         stepsEn[0],
-        '💡 [Bias Active] User loves cool modern picture aesthetic',
-        'Shifted primary tuning parameters to "Ice White" to emphasize colder premium luxury complexions'
+        '💡 [Bias Active]: Preferred aesthetic style is cold high-fashion.',
+        'Adjusted primary tuning vector to cool "Porcelain Cool" filter to highlight luxury pristine complexions.'
       ];
-    } else if (preferences.styleMode === 'glamorous' && presetId !== 'love') {
-      presetId = 'love';
-      baseAdviceZh = `【已结合习惯矫正】感应到您近期追光习惯为「甜美粉嫩」。AI 已自动为您匹配梦恋「初恋粉」补色环。消解面颊苍白，让脸蛋儿自带腮红微重桃花底妆！`;
-      baseAdviceEn = `[Aesthetic Bias Applied] To flatter your personalized sweetness expectation, Lumi has shifted recommendation to soft rose "First Love", erasing pale flat tones with dreamy sweet highlights.`;
-      memoryEffect = isZh ? '✦ 已结合近期偏好：自动偏置为梦幻蜜桃腮红补光' : '✦ Style Bias adjusted to sweet First Love Pink';
+    } else if (preferences.styleMode === 'glamorous' && presetId !== 'love' && presetId !== 'special_soft_sweet') {
+      presetId = 'special_soft_sweet';
+      baseAdviceZh = `✨ 【Lumi 已结合近期习惯】检测到您的近期追光偏好为桃花般粉嫩的「甜系氛围」。AI 已自动为您配对桃色主宰「柔樱粉黛」特调方案。消除脸颊蜡白与黯影，像自带高级心动腮红底妆！`;
+      baseAdviceEn = `✨ [Habits Tuned] Knowing your aesthetic style loves sweet and vibrant aesthetics, Lumi adjusted recommendation to soft "Sweet Peach" flush, neutralizing pale shadow lines with cozy peaches.`;
+      memoryEffect = isZh ? '✦ 已融入您近期的「甜系氛围」自拍美学习惯：偏置粉桃蜜意配方' : '✦ Style Bias adjusted to sweet Glamour Peach';
 
       stepsZh = [
         stepsZh[0],
-        isZh ? '💡 【习惯激活】检测到您习惯使用桃花般红润的「甜系氛围」腮红补色' : '💡 [Bias Active] Preference for romantic blush filters detected',
-        isZh ? '配方自动转换为「初恋粉」甜蜜漫射辅照，让脸庞自带甜甜的心动红晕' : 'Translated default suggestion into cherry blossom rosy "First Love" light aura'
+        isZh ? '💡 【习惯融合】：激活您爱用「甜系氛围」名媛蜜桃腮红补色自拍之个性惯用倾向。' : '💡 [Bias Active]: Loving romantic sweet blush photography signature style.',
+        isZh ? '对冲补光配方自动由普通白色转换至特调「柔樱粉黛」漫射，使面骨下方附着一层心动饱满绯红。' : 'Shifted default suggestion to rosy "Sweet Peach" light fill to cast heart-beating blush curves.'
       ];
       stepsEn = [
         stepsEn[0],
-        '💡 [Bias Active] Knowing your preference for sweet portrait aesthetics',
-        'Overrode target schema with pinkish glow "First Love" to outline youthful flush'
+        '💡 [Bias Active]: Preferred aesthetic style is romantic sweet peach blush.',
+        'Shifted default suggestion to rosy "Sweet Peach" light fill to cast heart-beating blush arcs.'
       ];
     } else {
       if (preferences.favoritePresetId && favName) {
         memoryEffect = isZh 
-          ? `✦ 契合您近期偏爱的「${favName}」补色 (已累计在相同位置应用达 ${preferences.usageCounts[preferences.favoritePresetId] || 1} 次)`
-          : `✦ Harmonized with your staple 「${favName}」 preference`;
+          ? `✦ 契合您日常高频应用的「${favName}」补色方案（此位置已累计应用达 ${preferences.usageCounts[preferences.favoritePresetId] || 1} 次）`
+          : `✦ Adapted to your staple 「${favName}」 light preference`;
       } else {
-        memoryEffect = isZh ? '✦ Lumi 空气补光镜已自适应就绪，随时按下快门记录美丽！' : '✦ Lumi AI auto-applied, snapshot ready!';
+        memoryEffect = isZh ? '✦ Lumi 空气智感补光镜已就绪，随时按下快门定格至臻气色！' : '✦ Lumi AI Ambiance system standby, ready to snap!';
       }
     }
 
@@ -1250,6 +1267,9 @@ export default function App() {
         },
         body: JSON.stringify({
           image: base64Image,
+          ambientStats,
+          preferences,
+          simulatedScenario,
         }),
       });
 

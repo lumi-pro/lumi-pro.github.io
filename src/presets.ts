@@ -6,7 +6,7 @@
 import { FillLightPreset } from './types';
 
 export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
-  // 1. Classic Series (经典) - Exactly 5 curated distinct colors
+  // 1. Classic Series (经典) - Curator-approved highly distinct colors
   {
     id: 'cream',
     name: '奶油肌',
@@ -83,7 +83,7 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
     category: 'classic'
   } as any,
 
-  // 2. Master Series (大师高定) - Exactly 7 highly distinct curated colors
+  // 2. Ambiance Series (氛围高定) - Curated, distinctive high-fashion colors (Merged Professional/Advanced & Removed Redundancies)
   {
     id: 'studio_white',
     name: '冷白光',
@@ -159,41 +159,11 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
     cameraFilterClass: 'contrast-103 brightness-[1.07] sepia-[0.04] saturate-108',
     category: 'master'
   } as any,
-  {
-    id: 'pearl_glow',
-    name: '珍珠光',
-    englishName: 'Pearl Glow',
-    description: '莹润珍珠，母贝偏光，脸颊自生微弱的乳粉高光泽感',
-    color: '#FDF6FA',
-    colorRgb: { r: 253, g: 246, b: 250 },
-    gradientFrom: 'from-[#FDF7FB]/80',
-    gradientTo: 'to-[#F6DFEC]/20',
-    intensity: 0.88,
-    accentColor: '#E0B5CC',
-    vibeQuote: '流连华丽的水光折射，宛如高级天然珍珠抹过苹果肌',
-    cameraFilterClass: 'contrast-105 brightness-[1.10] saturate-[1.02]',
-    category: 'master'
-  } as any,
-  {
-    id: 'light_honey',
-    name: '蜜金光',
-    englishName: 'Light Honey',
-    description: '澄澈椴树蜜，温甜透亮，面影边缘包裹的一抹黄金流线',
-    color: '#FDF8EA',
-    colorRgb: { r: 253, g: 248, b: 234 },
-    gradientFrom: 'from-[#FDF9EB]/80',
-    gradientTo: 'to-[#F7ECBE]/25',
-    intensity: 0.85,
-    accentColor: '#DEBC59',
-    vibeQuote: '蜜糖微甜、金光织影，如同午间摄影棚落满碎金反光板',
-    cameraFilterClass: 'contrast-103 brightness-[1.08] sepia-[0.06] saturate-[1.04]',
-    category: 'master'
-  } as any,
 
-  // 3. Special Series (特调人像) - 9 High-utility corrective lighting options
+  // 3. Special Series (特调人像) - Premium corrections (Renamed the localized titles for elegant, luxurious aesthetic branding)
   {
     id: 'special_blood_boost',
-    name: '盈润红颜',
+    name: '活力绯红',
     englishName: 'Vitality Blush',
     description: '盈亮红润色彩，倍速中和苍白倦怠，展现饱满健康好气色',
     color: '#E33A38',
@@ -208,7 +178,7 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
   } as any,
   {
     id: 'special_cold_white',
-    name: '清透冷白',
+    name: '清冽瓷白',
     englishName: 'Porcelain Cool',
     description: '微弱幽蓝冷调中和面部暗沉发黄，一抹瞬间还原高级透澈冷白',
     color: '#4B89F1',
@@ -223,7 +193,7 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
   } as any,
   {
     id: 'special_soft_sweet',
-    name: '蜜桃粉黛',
+    name: '柔樱粉黛',
     englishName: 'Sweet Peach',
     description: '甜柔桃粉粉雾，柔和修饰面部线条，打造极致温柔的心动甜美',
     color: '#EBB5C2',
@@ -238,8 +208,8 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
   } as any,
   {
     id: 'special_korean_dewy',
-    name: '莹亮水光',
-    englishName: 'Radiant Hydration',
+    name: '晨露晶莹',
+    englishName: 'Dewy Radiant',
     description: '高饱满晶莹透光，水网漫反射烘托出饱满丰盈的剔透水光肌质感',
     color: '#F7E552',
     colorRgb: { r: 247, g: 229, b: 82 },
@@ -253,8 +223,8 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
   } as any,
   {
     id: 'special_ambient_mood',
-    name: '迷醺氛围',
-    englishName: 'Velvet Mood',
+    name: '霓虹夜幕',
+    englishName: 'Neon Velvet',
     description: '电影级绚丽霓红紫粉，深邃重构眼眶与五官神采，浸染海报大片感',
     color: '#CD46EB',
     colorRgb: { r: 205, g: 70, b: 235 },
@@ -268,8 +238,8 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
   } as any,
   {
     id: 'special_anti_dullness',
-    name: '极光净肤',
-    englishName: 'Luminous Reset',
+    name: '极光净耀',
+    englishName: 'Crystal Reset',
     description: '薄荷晨露青，极效净空并修饰暗哑油黄，迅速折射出匀净白皙光采',
     color: '#79ECFC',
     colorRgb: { r: 121, g: 236, b: 252 },
@@ -283,8 +253,8 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
   } as any,
   {
     id: 'special_natural_daylight',
-    name: '原生日光',
-    englishName: 'Pure Daylight',
+    name: '原色真白',
+    englishName: 'Pure Sunlight',
     description: '还原真实100%全能无暇日光，精准突显面骨轮廓与神色细节',
     color: '#FFFFFF',
     colorRgb: { r: 255, g: 255, b: 255 },
@@ -298,8 +268,8 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
   } as any,
   {
     id: 'special_sunset_glow',
-    name: '余晖晚照',
-    englishName: 'Sunset Horizon',
+    name: '落日熔金',
+    englishName: 'Warm Horizon',
     description: '夕阳余晖陶金，柔曼描摹侧颜剪影，定格黄金沙滩般的复古优雅',
     color: '#E14D23',
     colorRgb: { r: 225, g: 77, b: 35 },
@@ -313,8 +283,8 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
   } as any,
   {
     id: 'special_acne_corrector',
-    name: '修颜御红',
-    englishName: 'Calming Correction',
+    name: '光学御红',
+    englishName: 'Optic Calming',
     description: '互补光学深莹紫，隐蔽面庞换季泛红、过敏、泛红痘印或血丝瑕疵',
     color: '#6210EC',
     colorRgb: { r: 98, g: 16, b: 236 },

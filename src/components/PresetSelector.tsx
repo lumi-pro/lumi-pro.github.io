@@ -35,7 +35,7 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
   onIntensityChange,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<'classic' | 'ambient' | 'studio'>('classic');
+  const [selectedCategory, setSelectedCategory] = useState<'classic' | 'master' | 'special'>('classic');
 
   // Synchronize category tab when preset changes
   useEffect(() => {
@@ -64,8 +64,8 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
 
   const categories = [
     { id: 'classic', labelZh: '经典', labelEn: 'Classic', icon: '✨' },
-    { id: 'ambient', labelZh: '高级', labelEn: 'Ambient', icon: '🔮' },
-    { id: 'studio', labelZh: '专业', labelEn: 'Studio', icon: '📸' },
+    { id: 'master', labelZh: '氛围', labelEn: 'Ambient', icon: '🔮' },
+    { id: 'special', labelZh: '特调', labelEn: 'Special', icon: '💄' },
   ] as const;
 
   const intensities = [

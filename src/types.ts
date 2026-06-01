@@ -16,7 +16,7 @@ export interface FillLightPreset {
   accentColor: string;
   vibeQuote: string;
   cameraFilterClass: string; // simulated filter look
-  category?: 'classic' | 'ambient' | 'studio';
+  category?: 'classic' | 'master' | 'special';
 }
 
 export interface AnalyticsEvent {

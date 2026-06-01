@@ -559,14 +559,6 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
               className="w-full h-full object-cover transform scale-[1.01]"
             />
           </div>
-          
-          {/* Simulation mode indicator banner */}
-          <div className="absolute top-3.5 left-1/2 -translate-x-1/2 z-35 py-1 px-3.5 rounded-full bg-white/25 backdrop-blur-md border border-white/20 flex items-center gap-1.5 justify-center whitespace-nowrap scale-85">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#FFEFEA] animate-pulse" />
-            <p className="text-[9px] text-white/95 font-sans tracking-wider font-semibold uppercase">
-              {cameraState === 'active' ? 'INTELLIGENT MIRROR' : 'LUMI PREVIEW'}
-            </p>
-          </div>
         </div>
       )}
 

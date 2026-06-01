@@ -83,7 +83,22 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
     category: 'classic'
   } as any,
 
-  // 2. Ambient Series (高级) - Exactly 5 curated distinct colors
+  // 2. Master Series (大师高定) - Exactly 7 highly distinct curated colors
+  {
+    id: 'studio_white',
+    name: '冷白光',
+    englishName: 'Studio White',
+    description: '大功率专业柔光箱，清脆高亮，展现顶级杂志的极真画质',
+    color: '#FCFDFF',
+    colorRgb: { r: 252, g: 253, b: 255 },
+    gradientFrom: 'from-[#FCFDFF]/90',
+    gradientTo: 'to-[#E2ECFF]/20',
+    intensity: 0.95,
+    accentColor: '#D1E0FC',
+    vibeQuote: '至净无偏色，大带宽还原骨相轮廓，高级冷傲气场',
+    cameraFilterClass: 'contrast-110 brightness-115 saturate-[0.95]',
+    category: 'master'
+  } as any,
   {
     id: 'velvet_purple',
     name: '丝绒紫',
@@ -97,7 +112,7 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
     accentColor: '#B088F5',
     vibeQuote: '弥漫浪漫丁香紫雾，勾勒清纯且高贵的眼眶光斑',
     cameraFilterClass: 'contrast-104 brightness-108 saturate-102 sepia-[0.02]',
-    category: 'ambient'
+    category: 'master'
   } as any,
   {
     id: 'rosy_wine',
@@ -112,7 +127,7 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
     accentColor: '#E68CA0',
     vibeQuote: '微冷偏红调的贵妇氛围，宛如被清风晕红的双颊',
     cameraFilterClass: 'contrast-[1.03] brightness-[1.06] saturate-112 hue-rotate-[-3deg]',
-    category: 'ambient'
+    category: 'master'
   } as any,
   {
     id: 'aurora_cyan',
@@ -127,7 +142,7 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
     accentColor: '#6BD4C2',
     vibeQuote: '去红舒缓、超尘脱俗，极简风清晨冷冽眼神',
     cameraFilterClass: 'contrast-106 brightness-110 saturate-[0.94] hue-rotate-[10deg]',
-    category: 'ambient'
+    category: 'master'
   } as any,
   {
     id: 'deep_peach',
@@ -142,54 +157,7 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
     accentColor: '#FFA48C',
     vibeQuote: '温热多蜜，完美祛除皮肤暗沉，一秒绽放充沛自信',
     cameraFilterClass: 'contrast-103 brightness-[1.07] sepia-[0.04] saturate-108',
-    category: 'ambient'
-  } as any,
-  {
-    id: 'sunset_rose',
-    name: '晚霞粉',
-    englishName: 'Sunset Rose',
-    description: '暮色晚霞，粉紫重叠，复刻海滩落日余晖的艺术自拍',
-    color: '#FFF0F7',
-    colorRgb: { r: 255, g: 240, b: 247 },
-    gradientFrom: 'from-[#FFF1F8]/70',
-    gradientTo: 'to-[#FCD1E7]/25',
-    intensity: 0.84,
-    accentColor: '#F5A3CD',
-    vibeQuote: '粉紫色泽层叠过渡，散发朦胧温柔的夕暮呼吸感',
-    cameraFilterClass: 'contrast-104 brightness-[1.09] saturate-[1.05] hue-rotate-[-8deg]',
-    category: 'ambient'
-  } as any,
-
-  // 3. Studio Series (专业) - Exactly 5 curated distinct colors
-  {
-    id: 'studio_white',
-    name: '冷白光',
-    englishName: 'Studio White',
-    description: '大功率专业柔光箱，清脆高亮，展现顶级杂志的极真画质',
-    color: '#FCFDFF',
-    colorRgb: { r: 252, g: 253, b: 255 },
-    gradientFrom: 'from-[#FCFDFF]/90',
-    gradientTo: 'to-[#E2ECFF]/20',
-    intensity: 0.95,
-    accentColor: '#D1E0FC',
-    vibeQuote: '至净无偏色，大带宽还原骨相轮廓，高级冷傲气场',
-    cameraFilterClass: 'contrast-110 brightness-115 saturate-[0.95]',
-    category: 'studio'
-  } as any,
-  {
-    id: 'warm_vanilla',
-    name: '香草白',
-    englishName: 'Warm Vanilla',
-    description: '香草米白，拂拭干燥，还原润泽的高级绸缎缎面感',
-    color: '#FAF7EE',
-    colorRgb: { r: 250, g: 247, b: 238 },
-    gradientFrom: 'from-[#FAF8EF]/80',
-    gradientTo: 'to-[#EFE9D7]/20',
-    intensity: 0.90,
-    accentColor: '#E6DAA8',
-    vibeQuote: '温柔内敛、富有质地，拍出顶级轻奢静奢风艺术照',
-    cameraFilterClass: 'contrast-104 brightness-111 sepia-[0.05] saturate-[0.98]',
-    category: 'studio'
+    category: 'master'
   } as any,
   {
     id: 'pearl_glow',
@@ -204,22 +172,7 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
     accentColor: '#E0B5CC',
     vibeQuote: '流连华丽的水光折射，宛如高级天然珍珠抹过苹果肌',
     cameraFilterClass: 'contrast-105 brightness-[1.10] saturate-[1.02]',
-    category: 'studio'
-  } as any,
-  {
-    id: 'soft_beige',
-    name: '卡其暖',
-    englishName: 'Soft Beige',
-    description: '质感卡其，中性低奢，底片自带顶级静奢低损面感',
-    color: '#F7F2EB',
-    colorRgb: { r: 247, g: 242, b: 235 },
-    gradientFrom: 'from-[#F8F3EC]/80',
-    gradientTo: 'to-[#E8DCCB]/20',
-    intensity: 0.81,
-    accentColor: '#CAB699',
-    vibeQuote: '极简摩登、亚光质地，塑造面部流畅挺拔的高维曲线',
-    cameraFilterClass: 'contrast-104 brightness-109 sepia-[0.03] saturate-[0.96]',
-    category: 'studio'
+    category: 'master'
   } as any,
   {
     id: 'light_honey',
@@ -234,6 +187,143 @@ export const FILL_LIGHT_PRESETS: FillLightPreset[] = [
     accentColor: '#DEBC59',
     vibeQuote: '蜜糖微甜、金光织影，如同午间摄影棚落满碎金反光板',
     cameraFilterClass: 'contrast-103 brightness-[1.08] sepia-[0.06] saturate-[1.04]',
-    category: 'studio'
+    category: 'master'
+  } as any,
+
+  // 3. Special Series (特调人像) - 9 High-utility corrective lighting options
+  {
+    id: 'special_blood_boost',
+    name: '盈润红颜',
+    englishName: 'Vitality Blush',
+    description: '盈亮红润色彩，倍速中和苍白倦怠，展现饱满健康好气色',
+    color: '#E33A38',
+    colorRgb: { r: 227, g: 58, b: 56 },
+    gradientFrom: 'from-[#FF4D4D]/70',
+    gradientTo: 'to-[#E33A38]/20',
+    intensity: 0.85,
+    accentColor: '#FF4D4D',
+    vibeQuote: '红润娇嫩，由内而外展现自然红润好气色',
+    cameraFilterClass: 'contrast-103 brightness-[1.07] saturate-108 hue-rotate-[-2deg]',
+    category: 'special'
+  } as any,
+  {
+    id: 'special_cold_white',
+    name: '清透冷白',
+    englishName: 'Porcelain Cool',
+    description: '微弱幽蓝冷调中和面部暗沉发黄，一抹瞬间还原高级透澈冷白',
+    color: '#4B89F1',
+    colorRgb: { r: 75, g: 137, b: 241 },
+    gradientFrom: 'from-[#6099F5]/70',
+    gradientTo: 'to-[#4B89F1]/20',
+    intensity: 0.92,
+    accentColor: '#6099F5',
+    vibeQuote: '冰清玉洁，尽显极致高端的清冷高级感',
+    cameraFilterClass: 'contrast-108 brightness-112 saturate-[0.85] hue-rotate-[10deg]',
+    category: 'special'
+  } as any,
+  {
+    id: 'special_soft_sweet',
+    name: '蜜桃粉黛',
+    englishName: 'Sweet Peach',
+    description: '甜柔桃粉粉雾，柔和修饰面部线条，打造极致温柔的心动甜美',
+    color: '#EBB5C2',
+    colorRgb: { r: 235, g: 181, b: 194 },
+    gradientFrom: 'from-[#FBC4C4]/70',
+    gradientTo: 'to-[#EBB5C2]/20',
+    intensity: 0.75,
+    accentColor: '#FBC4C4',
+    vibeQuote: '如风拂面，在甜柔粉雾中展现烂漫温柔',
+    cameraFilterClass: 'contrast-101 brightness-[1.10] saturate-105',
+    category: 'special'
+  } as any,
+  {
+    id: 'special_korean_dewy',
+    name: '莹亮水光',
+    englishName: 'Radiant Hydration',
+    description: '高饱满晶莹透光，水网漫反射烘托出饱满丰盈的剔透水光肌质感',
+    color: '#F7E552',
+    colorRgb: { r: 247, g: 229, b: 82 },
+    gradientFrom: 'from-[#FFF59D]/70',
+    gradientTo: 'to-[#F7E552]/20',
+    intensity: 0.88,
+    accentColor: '#FFF59D',
+    vibeQuote: '透亮光泽，仿佛迎光初绽的灵动透润水光肌',
+    cameraFilterClass: 'contrast-104 brightness-112 sepia-[0.02] saturate-102',
+    category: 'special'
+  } as any,
+  {
+    id: 'special_ambient_mood',
+    name: '迷醺氛围',
+    englishName: 'Velvet Mood',
+    description: '电影级绚丽霓红紫粉，深邃重构眼眶与五官神采，浸染海报大片感',
+    color: '#CD46EB',
+    colorRgb: { r: 205, g: 70, b: 235 },
+    gradientFrom: 'from-[#E58CFF]/70',
+    gradientTo: 'to-[#CD46EB]/15',
+    intensity: 0.85,
+    accentColor: '#E58CFF',
+    vibeQuote: '迷雾轻扬，独享微醺迷离的高阶艺术氛围',
+    cameraFilterClass: 'contrast-105 brightness-107 saturate-110 hue-rotate-[-5deg]',
+    category: 'special'
+  } as any,
+  {
+    id: 'special_anti_dullness',
+    name: '极光净肤',
+    englishName: 'Luminous Reset',
+    description: '薄荷晨露青，极效净空并修饰暗哑油黄，迅速折射出匀净白皙光采',
+    color: '#79ECFC',
+    colorRgb: { r: 121, g: 236, b: 252 },
+    gradientFrom: 'from-[#9EFAF9]/75',
+    gradientTo: 'to-[#79ECFC]/25',
+    intensity: 0.90,
+    accentColor: '#9EFAF9',
+    vibeQuote: '瞬间唤醒，整张脸重归无瑕莹润的通透亮气',
+    cameraFilterClass: 'contrast-106 brightness-113 saturate-[0.90] hue-rotate-[12deg]',
+    category: 'special'
+  } as any,
+  {
+    id: 'special_natural_daylight',
+    name: '原生日光',
+    englishName: 'Pure Daylight',
+    description: '还原真实100%全能无暇日光，精准突显面骨轮廓与神色细节',
+    color: '#FFFFFF',
+    colorRgb: { r: 255, g: 255, b: 255 },
+    gradientFrom: 'from-[#FFFFFF]/90',
+    gradientTo: 'to-[#EFEFEF]/25',
+    intensity: 0.85,
+    accentColor: '#ECECEC',
+    vibeQuote: '返璞归真，记录面容精细细节的天然素颜美感',
+    cameraFilterClass: 'contrast-102 brightness-108 saturate-100',
+    category: 'special'
+  } as any,
+  {
+    id: 'special_sunset_glow',
+    name: '余晖晚照',
+    englishName: 'Sunset Horizon',
+    description: '夕阳余晖陶金，柔曼描摹侧颜剪影，定格黄金沙滩般的复古优雅',
+    color: '#E14D23',
+    colorRgb: { r: 225, g: 77, b: 35 },
+    gradientFrom: 'from-[#F58F49]/75',
+    gradientTo: 'to-[#E14D23]/25',
+    intensity: 0.82,
+    accentColor: '#F58F49',
+    vibeQuote: '晚霞漫天，复现慵懒度假风光的浪漫微醺落日',
+    cameraFilterClass: 'contrast-105 brightness-[1.04] sepia-[0.16] saturate-[1.15] hue-rotate-[-3deg]',
+    category: 'special'
+  } as any,
+  {
+    id: 'special_acne_corrector',
+    name: '修颜御红',
+    englishName: 'Calming Correction',
+    description: '互补光学深莹紫，隐蔽面庞换季泛红、过敏、泛红痘印或血丝瑕疵',
+    color: '#6210EC',
+    colorRgb: { r: 98, g: 16, b: 236 },
+    gradientFrom: 'from-[#8B5CF6]/70',
+    gradientTo: 'to-[#6210EC]/20',
+    intensity: 0.80,
+    accentColor: '#a78bfa',
+    vibeQuote: '光学防护，遮盖面部红肿血丝，还原净空质感',
+    cameraFilterClass: 'contrast-104 brightness-107 saturate-[0.93] hue-rotate-[18deg]',
+    category: 'special'
   } as any,
 ];

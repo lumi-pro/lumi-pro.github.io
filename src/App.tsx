@@ -1700,15 +1700,7 @@ export default function App() {
               : 'opacity-100 pointer-events-auto translate-y-0 scale-100'
           }`}
         >
-          {/* 💡 Ambient & Operation Gesture Hint - Moved inside the console deck to avoid layout shift */}
-          <div className="text-center pointer-events-none flex items-center justify-center gap-1.5 bg-black/15 border border-white/5 py-1 px-3.5 rounded-full text-[9.5px] text-stone-300 font-sans font-medium tracking-wide backdrop-blur-xs mx-auto mb-1 animate-fade-in">
-            <span className="w-1 h-1 rounded-full bg-indigo-400 animate-pulse" />
-            <span>
-              {isZh 
-                ? '上下滑动调节补发光亮度 ｜ 左右滑动调节温润肤色' 
-                : 'Swipe vertically for light level | Horizontally for warm-softness'}
-            </span>
-          </div>
+
 
           <div className="w-full flex flex-col items-center mb-1 px-3 animate-fade-in">
             {!isAiPanelExpanded ? (
@@ -2099,65 +2091,19 @@ export default function App() {
         </div>
 
         {/* =========================================================
-            Ⅲ. FLOATING SEMI-TRANSPARENT TUNER TAB (右侧半透明外露浮标 / 极简色板入口)
-            ========================================================= */}
-        {immersiveMode && (
-          <button
-            id="lumi-floating-tuner-tab"
-            onClick={() => {
-              playSound('click');
-              setImmersiveMode(false); // Unfurls console panel
-            }}
-            className="fixed right-0 top-1/2 -translate-y-1/2 bg-black/40 hover:bg-black/55 active:scale-95 border-l border-y border-white/10 pl-3 pr-2 py-4 rounded-l-2xl shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md flex flex-col items-center gap-1.5 cursor-pointer transition-all duration-300 group z-40 animate-fade-in"
-            title={isZh ? '打开调色控制台' : 'Open Tuning Console'}
-          >
-            <Sliders className="w-3.5 h-3.5 text-pink-300 group-hover:rotate-12 transition-transform" />
-            
-            <div className="flex flex-col items-center gap-0.5 my-1 text-[8px] font-extrabold tracking-normal uppercase text-white/90 select-none leading-none">
-              {isZh ? (
-                <>
-                  <span className="mb-0.5 text-pink-200/90 font-sans">调</span>
-                  <span className="text-pink-200/90 font-sans">色</span>
-                </>
-              ) : (
-                <>
-                  <span>T</span>
-                  <span>U</span>
-                  <span>N</span>
-                  <span>E</span>
-                </>
-              )}
-            </div>
-
-            {/* Glowing active light color indicator */}
-            <span 
-              className="w-1.5 h-1.5 rounded-full animate-pulse shadow-md"
-              style={{
-                backgroundColor: activePreset.color,
-                boxShadow: `0 0 8px ${activePreset.color}`
-              }}
-            />
-          </button>
-        )}
-
-        {/* =========================================================
             Ⅳ. UNIFIED STABLE SHUTTER & GALLERY CONTROL ROW
             ========================================================= */}
         <div className="w-full flex items-center justify-between px-8 py-2 shrink-0 z-30 select-none">
           
           {/* Gallery Thumbnail (Statically aligned to left) */}
-          <button
-            onClick={() => {
-              playSound('click');
-              if (capturedPhotos.length === 0) {
-                showToast(isZh ? '📸 拍摄第一张自拍照，即可开启专属胶片册！' : 'Take a photo first!');
-                return;
-              }
-              setShowPhotoViewer(true);
-            }}
-            className="w-12 h-12 rounded-full bg-black/20 hover:bg-black/35 border border-white/10 flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 relative shadow-md backdrop-blur-md"
-          >
-            {capturedPhotos.length > 0 ? (
+          {capturedPhotos.length > 0 ? (
+            <button
+              onClick={() => {
+                playSound('click');
+                setShowPhotoViewer(true);
+              }}
+              className="w-12 h-12 rounded-full bg-black/20 hover:bg-black/35 border border-white/10 flex items-center justify-center cursor-pointer overflow-hidden transition-all duration-300 relative shadow-md backdrop-blur-md"
+            >
               <div className="w-full h-full relative group">
                 <img
                   src={capturedPhotos[0].photoUrl || "/src/assets/images/portrait_simulate_1779326784414.png"}
@@ -2168,10 +2114,10 @@ export default function App() {
                   {capturedPhotos.length}
                 </span>
               </div>
-            ) : (
-              <div className="w-2.5 h-2.5 rounded-full bg-white/40" />
-            )}
-          </button>
+            </button>
+          ) : (
+            <div className="w-12 h-12" />
+          )}
 
           {/* Shutter Camera Button (Statically aligned to center) */}
           <button
@@ -2184,16 +2130,17 @@ export default function App() {
 
           {/* Action toggle button (Statically aligned to right) */}
           {immersiveMode ? (
-            /* External Softbox modal expansion trigger in Immersive Mode */
+            /* Tuning console unfold trigger in Immersive Mode */
             <button
               onClick={() => {
-                playSound('focus');
-                setPhysicalGlowActive(true);
+                playSound('click');
+                setImmersiveMode(false); // Unfurls console panel
               }}
-              className="w-12 h-12 rounded-full bg-black/20 hover:bg-black/35 text-white border border-white/10 flex items-center justify-center cursor-pointer transition-all duration-300 shadow-md backdrop-blur-md"
-              title={isZh ? '全屏外置柔光板' : 'Full Screen Softbox'}
+              className="w-12 h-12 rounded-full bg-black/25 hover:bg-black/35 text-white border border-white/10 flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-md backdrop-blur-md transition-all active:scale-95 animate-fade-in"
+              title={isZh ? '打开调色控制台' : 'Open Tuning Console'}
             >
-              <Maximize2 className="w-4.5 h-4.5 text-white animate-pulse" />
+              <Sliders className="w-4 h-4 text-pink-300" />
+              <span className="text-[7.5px] scale-90 text-white/75 font-sans font-medium">{isZh ? '调色' : 'Tune'}</span>
             </button>
           ) : (
             /* Immersive transition button to collapse manually */

@@ -158,6 +158,24 @@ export default function App() {
   const [isAiPanelExpanded, setIsAiPanelExpanded] = useState<boolean>(false);
   const [isAiScanning, setIsAiScanning] = useState<boolean>(false);
 
+  // Scene Locking & Anti-flicker states
+  const [manualLockMode, setManualLockMode] = useState<boolean>(false);
+  const [lockedStats, setLockedStats] = useState<{
+    brightness: number;
+    warmth: number;
+    faceBrightness: number;
+    bgBrightness: number;
+    underEyeShadow: number;
+    backlightRatio: number;
+    isYellowLight: boolean;
+    skinToneWarmth: number;
+    contrastRatio: number;
+    simulatedScenario: string;
+    styleMode: string;
+  } | null>(null);
+  const [sceneChangeScore, setSceneChangeScore] = useState<number>(0);
+  const [lockedRecommendedInfo, setLockedRecommendedInfo] = useState<any>(null);
+
   // Real-time or Advanced AI Results from Gemini
   const [aiReport, setAiReport] = useState<{
     skinTone: string;
@@ -411,35 +429,114 @@ export default function App() {
     });
   };
 
+  const calculateSceneChangeScore = (current: typeof ambientStats, locked: any) => {
+    if (!locked) return 100;
+
+    let score = 0;
+
+    // 1. Scene category / simulated scenario change (causes instant 100% change rating)
+    if (simulatedScenario !== locked.simulatedScenario) {
+      return 100;
+    }
+    // 2. Personal makeup aesthetic profile changes
+    if (preferences.styleMode !== locked.styleMode) {
+      return 100;
+    }
+
+    // 3. Ambient face brightness change (exceeding 30%)
+    const brightnessDiffPct = Math.abs(current.faceBrightness - locked.faceBrightness) / (locked.faceBrightness || 1);
+    if (brightnessDiffPct > 0.30) {
+      // 30% brightness change is significant. Diff of 30% maps to ~45 points change weight
+      score += Math.min(60, Math.round(brightnessDiffPct * 150));
+    }
+
+    // 4. White balance / skin tone warmth change (exceeding 20%)
+    const warmthDiffPct = Math.abs(current.skinToneWarmth - locked.skinToneWarmth) / (locked.skinToneWarmth || 1);
+    if (warmthDiffPct > 0.20) {
+      // 20% warmth change is significant. Diff of 20% maps to ~40 points change weight
+      score += Math.min(60, Math.round(warmthDiffPct * 200));
+    }
+
+    // 5. Environmental background brightness change (exceeding 30%)
+    const bgDiffPct = Math.abs(current.bgBrightness - locked.bgBrightness) / (locked.bgBrightness || 1);
+    if (bgDiffPct > 0.30) {
+      score += Math.min(45, Math.round(bgDiffPct * 120));
+    }
+
+    // 6. Extreme backlight ratio changes
+    const backlightDiff = Math.abs(current.backlightRatio - locked.backlightRatio);
+    if (backlightDiff > 0.40) {
+      score += Math.min(30, Math.round(backlightDiff * 50));
+    }
+
+    // 7. Facial occlusion / shadowing adjustments (exceeding 15%)
+    const eyeShadowDiff = Math.abs(current.underEyeShadow - locked.underEyeShadow);
+    if (eyeShadowDiff > 15) {
+      score += Math.min(25, Math.round((eyeShadowDiff - 15) * 1.5));
+    }
+
+    return Math.min(100, score);
+  };
+
   const handleAmbientDetected = (stats: typeof ambientStats) => {
     setAmbientStats(stats);
     
-    if (preferences.autoApply) {
+    // If we have an active advanced Gemini AI vision report, we respect and freeze that
+    if (aiReport) {
+      if (!lockedStats) {
+        setLockedStats({
+          ...stats,
+          simulatedScenario,
+          styleMode: preferences.styleMode
+        });
+        setSceneChangeScore(0);
+      } else {
+        const score = calculateSceneChangeScore(stats, lockedStats);
+        setSceneChangeScore(score);
+        if (score > 70) {
+          setAiReport(null); // automatic fade-back to rule-based sensory tracking when scene changes significantly
+          setLockedStats(null);
+        }
+      }
+      return;
+    }
+
+    // 1. Initial sensory state or complete scene unlock
+    if (!lockedStats) {
+      const recommendation = getRecommendation(stats.brightness, stats.warmth);
+      setLockedRecommendedInfo(recommendation);
+      setLockedStats({
+        ...stats,
+        simulatedScenario,
+        styleMode: preferences.styleMode
+      });
+      setSceneChangeScore(0);
+
+      // Verify custom personal Scene Memory cache
       const sKey = getSceneKey(stats);
-      if (sKey !== lastRestoredSceneKey) {
-        const saved = preferences.sceneMemory?.[sKey];
-        if (saved) {
-          const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === saved.presetId);
-          if (matchedPreset) {
+      const saved = preferences.sceneMemory?.[sKey];
+
+      if (saved) {
+        const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === saved.presetId);
+        if (matchedPreset) {
+          if (!manualLockMode && preferences.autoApply) {
             setActivePreset(matchedPreset);
             setIsLightSelected(true);
             setBrightness(saved.brightness);
             setSoftness(saved.softness);
             setIntensityLevel(saved.intensityLevel || 'normal');
-            setLastRestoredSceneKey(sKey);
-            
-            const presetName = isZh ? matchedPreset.name : matchedPreset.englishName;
-            const msg = isZh 
-              ? `✨ [AI 记忆还原] 瞬间适配为您在此自拍环境习惯的「${presetName}」`
-              : `✨ [Memory Restored] Switched to your favorite "${presetName}" setup for this environment`;
-            
-            showToast(msg);
           }
-        } else {
-          // Default light adaptive matching based on scene understanding
-          const recommendation = getRecommendation(stats.brightness, stats.warmth);
-          const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendation.presetId);
-          if (matchedPreset) {
+          const presetName = isZh ? matchedPreset.name : matchedPreset.englishName;
+          const msg = isZh 
+            ? `✨ [AI 记忆还原] 来到新场景，自动恢复您在此环境偏爱的「${presetName}」补光`
+            : `✨ [Memory Restored] Sensed scene key! Loaded your custom "${presetName}" setup`;
+          showToast(msg);
+        }
+      } else {
+        // Cold start - autoapply the new recommendation if allowed & not manually overridden
+        const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendation.presetId);
+        if (matchedPreset) {
+          if (!manualLockMode && preferences.autoApply) {
             setActivePreset(matchedPreset);
             setIsLightSelected(true);
             
@@ -455,13 +552,75 @@ export default function App() {
 
             setBrightness(targetB);
             setSoftness(targetS);
-            setLastRestoredSceneKey(sKey);
-            
+          }
+          const presetName = isZh ? matchedPreset.name : matchedPreset.englishName;
+          const msg = isZh 
+            ? `✨ [Lumi AI 智能自适应] 来到新环境，自选推荐最佳「${presetName}」`
+            : `✨ [Lumi AI Ambiance] Located new scene! Custom recommending "${presetName}" preset`;
+          showToast(msg);
+        }
+      }
+    } else {
+      // 2. We have a stable locked base state. Evaluate if scene has changed beyond threshold
+      const score = calculateSceneChangeScore(stats, lockedStats);
+      setSceneChangeScore(score);
+
+      if (score > 70) {
+        // Scene changed significantly! Trigger recalculation and reset state tracking base
+        const recommendation = getRecommendation(stats.brightness, stats.warmth);
+        setLockedRecommendedInfo(recommendation);
+        setLockedStats({
+          ...stats,
+          simulatedScenario,
+          styleMode: preferences.styleMode
+        });
+        setSceneChangeScore(0);
+
+        // Verify custom Scene Memory
+        const sKey = getSceneKey(stats);
+        const saved = preferences.sceneMemory?.[sKey];
+
+        if (saved) {
+          const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === saved.presetId);
+          if (matchedPreset) {
+            if (!manualLockMode && preferences.autoApply) {
+              setActivePreset(matchedPreset);
+              setIsLightSelected(true);
+              setBrightness(saved.brightness);
+              setSoftness(saved.softness);
+              setIntensityLevel(saved.intensityLevel || 'normal');
+            }
             const presetName = isZh ? matchedPreset.name : matchedPreset.englishName;
             const msg = isZh 
-              ? `✨ [Lumi AI 智能自适应] 检测到自拍环境变化，智能对冲并匹配「${presetName}」补光方案`
-              : `✨ [Lumi AI Ambiance] Detected environment change, matching "${presetName}" style`;
-            
+              ? `✨ [AI 记忆还原] 自拍场景已变，已自动恢复在相同场景最喜爱的「${presetName}」`
+              : `✨ [Memory Restored] Environment changed, loaded your favorite "${presetName}" setup`;
+            showToast(msg);
+          }
+        } else {
+          // Cold start - autoapply fresh recommender parameters
+          const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendation.presetId);
+          if (matchedPreset) {
+            if (!manualLockMode && preferences.autoApply) {
+              setActivePreset(matchedPreset);
+              setIsLightSelected(true);
+              
+              let targetB = matchedPreset.intensity;
+              targetB = parseFloat(((targetB * 0.35) + (preferences.averageBrightness * 0.65)).toFixed(2));
+              if (targetB < 0.25) targetB = 0.25;
+              if (targetB > 1.0) targetB = 1.0;
+
+              let targetS = 0.65;
+              targetS = parseFloat(((targetS * 0.4) + (preferences.averageSoftness * 0.6)).toFixed(2));
+              if (targetS < 0.15) targetS = 0.15;
+              if (targetS > 0.95) targetS = 0.95;
+
+              setBrightness(targetB);
+              setSoftness(targetS);
+            }
+            const presetName = isZh ? matchedPreset.name : matchedPreset.englishName;
+            const msg = isZh 
+              ? `✨ [Lumi AI 场景重估] 光线明显发生变化，重新为您推选「${presetName}」配方`
+              : `✨ [Lumi AI Scene Reset] Significant sensory shift, matching new "${presetName}" preset`;
             showToast(msg);
           }
         }
@@ -1021,7 +1180,7 @@ export default function App() {
 
   // ⚡ Lumi AI Auto-Tune / 自动追光 effect
   useEffect(() => {
-    if (preferences.autoApply) {
+    if (preferences.autoApply && !manualLockMode) {
       if (aiReport) {
         const pres = FILL_LIGHT_PRESETS.find(p => p.id === aiReport.recommendedPresetId) || recommendedPreset;
         setActivePreset(pres);
@@ -1050,12 +1209,13 @@ export default function App() {
         setSoftness(targetS);
       }
     }
-  }, [recommendedPreset.id, preferences.autoApply, aiReport]);
+  }, [recommendedPreset.id, preferences.autoApply, aiReport, manualLockMode]);
 
   const handleApplyAiRecommendation = () => {
     playSound('focus'); // play mechanical cinematic dual-tone sound for magical feeling
     setActivePreset(recommendedPreset);
     setIsLightSelected(true);
+    setManualLockMode(false); // Reset manual override as user has locked onto AI advice
     setImmersiveMode(true); // Enter immersive selfie mode on applying AI recommendations
     analyticsTracker.track('ai_apply_recommendation', {
       ambientScenario: simulatedScenario,
@@ -1103,6 +1263,7 @@ export default function App() {
     playSound('click');
     setActivePreset(preset);
     setIsLightSelected(true);
+    setManualLockMode(true); // Enter manual lock mode on choice
     handleRecordPresetUsage(preset.id);
     setIsAiPanelExpanded(false);
     setImmersiveMode(true); // Auto-trigger immersive selfie mode on selection
@@ -1111,6 +1272,10 @@ export default function App() {
       presetName: preset.name,
       mode: 'single',
     });
+    showToast(isZh 
+      ? `💡 配色已手动锁定。AI 自动切换已暂停，您可在 AI 面板中重新开启追光。`
+      : `💡 Color selected and locked. Lumi AI auto-tuning paused. Resume anytime from the AI Panel.`
+    );
   };
 
   const handleSplitPresetSelect = (preset: FillLightPreset, side: 'left' | 'right') => {
@@ -1121,6 +1286,7 @@ export default function App() {
       setSplitPresetRight(preset);
     }
     setIsLightSelected(true);
+    setManualLockMode(true); // Enter manual lock mode on split choice
     setIsAiPanelExpanded(false);
     setImmersiveMode(true); // Auto-trigger immersive selfie mode on split choice
     analyticsTracker.track('split_preset_change', {
@@ -1129,6 +1295,10 @@ export default function App() {
       presetName: preset.name,
       pairedWith: side === 'left' ? splitPresetRight.id : splitPresetLeft.id,
     });
+    showToast(isZh
+      ? `💡 左右分屏已手动锁定。AI 自动切换已暂停，可在 AI 面板中重新开启追光。`
+      : `💡 Split-light locked. Lumi AI auto-tuning paused. Resume anytime from the AI Panel.`
+    );
   };
 
   const handleBrightnessChange = (val: number) => {
@@ -1282,6 +1452,8 @@ export default function App() {
       
       // Save report content
       setAiReport(report);
+      setManualLockMode(false); // Reset manual lock when they explicitly trigger AI analysis
+      setLockedStats(null); // Reset locked base to baseline from newly scanned frame
       
       // Auto-tune sliders & configurations
       const pres = FILL_LIGHT_PRESETS.find(p => p.id === report.recommendedPresetId);
@@ -1560,7 +1732,7 @@ export default function App() {
                 onSimulatedPortraitToggle={handleToggleSimulatedCamera}
                 isPip={true}
                 language={settings.language}
-                onAmbientDetected={setAmbientStats}
+                onAmbientDetected={handleAmbientDetected}
                 simulatedScenario={simulatedScenario}
                 intensityLevel={intensityLevel}
               />
@@ -1679,7 +1851,7 @@ export default function App() {
               useSimulatedPortrait={useSimulatedPortrait}
               onSimulatedPortraitToggle={handleToggleSimulatedCamera}
               language={settings.language}
-              onAmbientDetected={setAmbientStats}
+              onAmbientDetected={handleAmbientDetected}
               simulatedScenario={simulatedScenario}
               intensityLevel={intensityLevel}
               aiDiagnostic={isAiPanelExpanded}
@@ -1813,6 +1985,8 @@ export default function App() {
                         if (next) {
                           setActivePreset(recommendedPreset);
                           setIsLightSelected(true);
+                          setManualLockMode(false); // Enable tracking when auto apply is turned on
+                          setLockedStats(null); // Reset locked base to start fresh
                         }
                         return { ...prev, autoApply: next };
                       });
@@ -1865,6 +2039,46 @@ export default function App() {
                         [{isZh ? '还原传感器' : 'Reset'}]
                       </button>
                     </div>
+                  )}
+                </div>
+
+                {/* Lumi AI Stability Rate & Scene Lock Display */}
+                <div className="flex items-center justify-between text-[10px] bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/10 py-2 px-3 rounded-xl font-sans mt-0.5 transition-all">
+                  <div className="flex items-center gap-2">
+                    {manualLockMode ? (
+                      <>
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                        </span>
+                        <span className="text-amber-300 font-semibold tracking-wide">
+                          {isZh ? '● 补光锁定中: 自动追光已关闭' : '● Palette Locked: Auto-tuning paused'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span className="text-emerald-400 font-semibold tracking-wide">
+                          {isZh ? `● AI 灵变锁: 场景锁定稳定中 (偏移: ${sceneChangeScore}%)` : `● AI Lock: Scene locked stable (Shift: ${sceneChangeScore}%)`}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  {manualLockMode && (
+                    <button
+                      onClick={() => {
+                        playSound('focus');
+                        setManualLockMode(false);
+                        setLockedStats(null); // Force immediately re-recommend and lock
+                        showToast(isZh ? '✨ 已重新恢复 AI 自适应场景追光！' : '✨ Resumed AI adaptive auto-tuning!');
+                      }}
+                      className="text-[9.5px] font-extrabold text-indigo-300 hover:text-indigo-200 hover:underline cursor-pointer transition-colors px-2 py-0.5 rounded bg-indigo-500/15"
+                    >
+                      {isZh ? '恢复追光' : 'Resume'}
+                    </button>
                   )}
                 </div>
 

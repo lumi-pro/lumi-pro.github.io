@@ -1806,9 +1806,9 @@ export default function App() {
           if (!targetUrl.includes(":generateContent")) {
             targetUrl = targetUrl.replace(/\/+$/, "");
             if (!targetUrl.includes("/v1beta") && !targetUrl.includes("/v1")) {
-              targetUrl = targetUrl + "/v1beta/models/gemini-1.5-flash:generateContent";
+              targetUrl = targetUrl + "/v1beta/models/" + storedModel + ":generateContent";
             } else {
-              targetUrl = targetUrl + "/models/gemini-1.5-flash:generateContent";
+              targetUrl = targetUrl + "/models/" + storedModel + ":generateContent";
             }
           }
           if (!targetUrl.includes("key=")) {

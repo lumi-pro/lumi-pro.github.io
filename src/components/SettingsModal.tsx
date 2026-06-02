@@ -38,8 +38,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   useSimulatedPortrait,
   onToggleSimulatedPortrait,
 }) => {
+  const [apiProvider, setApiProvider] = useState<string>(() => {
+    return localStorage.getItem('lumi_api_provider') || 'gemini';
+  });
+  const [apiModel, setApiModel] = useState<string>(() => {
+    return localStorage.getItem('lumi_api_model') || 'gemini-2.5-flash';
+  });
   const [apiEndpoint, setApiEndpoint] = useState<string>(() => {
-    return localStorage.getItem('lumi_api_endpoint') || '';
+    return localStorage.getItem('lumi_api_endpoint') || 'https://generativelanguage.googleapis.com';
   });
   const [apiKey, setApiKey] = useState<string>(() => {
     return localStorage.getItem('lumi_api_key') || '';
@@ -49,6 +55,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   });
   const [showKey, setShowKey] = useState<boolean>(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
+
+  // Connection testing states
+  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'failed'>('idle');
+  const [testFeedback, setTestFeedback] = useState<string>('');
 
   const formatDate = (isoMsg: string) => {
     try {
@@ -90,7 +100,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[#ff80a3]" />
           <h2 className="text-[15px] font-heading font-semibold text-neutral-800">
-            {isZh ? 'Lumi Glow 参数设置' : 'Lumi Glow Settings'}
+            {isZh ? 'Lumi 参数设置' : 'Lumi Settings'}
           </h2>
         </div>
         <button
@@ -103,22 +113,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
       {/* Settings Scroll Area */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5">
-        {/* Profile Card Mock */}
-        <div className="bg-white rounded-2xl p-4 border border-[#ffd2df] shadow-sm flex items-center gap-3.5 relative overflow-hidden">
-          <div className="absolute right-[-10px] bottom-[-15px] text-pink-50 opacity-50 z-0">
-            <Heart className="w-24 h-24 fill-current stroke-none" />
-          </div>
-          <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center text-[#ff80a3] font-serif font-semibold text-lg border border-pink-200 z-10 shrink-0">
-            L
-          </div>
-          <div className="z-10">
-            <h3 className="text-sm font-semibold text-neutral-800">Lumi VIP 会员 · 永久启用</h3>
-            <p className="text-[11px] text-neutral-400 mt-0.5">
-              {isZh ? '“让普通环境，拍出满分氛围美”' : '“Aesthetic portraits in any light”'}
-            </p>
-          </div>
-        </div>
-
         {/* 1. Camera Input Source Selection */}
         <div className="flex flex-col gap-2">
           <span className="text-[10px] font-heading font-semibold tracking-wider text-[#cca0ab] uppercase block px-1">
@@ -248,48 +242,85 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <span className="text-[10px] font-heading font-semibold tracking-wider text-[#cca0ab] uppercase block px-1 animate-pulse">
             {isZh ? 'AI 接口配置 (AI API Configuration)' : 'AI API Configuration'}
           </span>
-          <div className="bg-white rounded-2xl border border-pink-100/60 p-4 shadow-sm flex flex-col gap-3.5">
+          <div className="bg-white rounded-2xl border border-pink-100/60 p-4 shadow-sm flex flex-col gap-3.5 text-left">
             <p className="text-[10px] text-neutral-400 leading-normal mb-1">
               {isZh 
-                ? '您的 API 信息保存在本地设备，仅用于访问 AI 智能分析功能。' 
-                : 'Your API information is stored locally and only used to access AI-powered features.'}
+                ? '您的 API 信息加密保存在本地浏览器中，所有的测光诊断请求统一走后端安全代理，保护 Key 的安全性。' 
+                : 'Your API information is securely saved in your browser. All evaluation requests go through secure proxy to hide keys.'}
             </p>
 
-            {/* Connection Status and Last Saved Time Row (Only displays if credentials exist) */}
-            {apiEndpoint && apiKey && (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 border border-emerald-100 border-solid text-left">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-semibold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    {isZh ? '已连接 (Connected)' : 'Connected'}
-                  </span>
-                  {lastSavedTime && (
-                    <span className="text-[9px] text-emerald-600/80 font-mono">
-                      {isZh 
-                        ? `最后保存时间: ${formatDate(lastSavedTime)}` 
-                        : `Last Saved: ${formatDate(lastSavedTime)}`}
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* API Endpoint Input */}
-            <div className="flex flex-col gap-1.5 text-left">
+            {/* AI Provider Select */}
+            <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium text-[#cca0ab]">
-                {isZh ? 'API 接口端点 (API Endpoint)' : 'API Endpoint'}
+                {isZh ? 'AI 服务商 (Provider)' : 'AI Provider'}
+              </label>
+              <select
+                value={apiProvider}
+                onChange={(e) => {
+                  const prov = e.target.value;
+                  setApiProvider(prov);
+                  const defaultsMap: Record<string, { url: string; model: string }> = {
+                    gemini: { url: 'https://generativelanguage.googleapis.com', model: 'gemini-2.5-flash' },
+                    openai: { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
+                    doubao: { url: 'https://ark.cn-beijing.volces.com/api/v3', model: 'ep-xxxxxxxxxxxx' },
+                    deepseek: { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+                    claude: { url: 'https://api.anthropic.com', model: 'claude-3-5-sonnet' },
+                    openrouter: { url: 'https://openrouter.ai/api/v1', model: 'google/gemini-2.5-flash' },
+                    siliconflow: { url: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3' },
+                    custom: { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' }
+                  };
+                  const fallbackConfig = defaultsMap[prov];
+                  if (fallbackConfig) {
+                    setApiEndpoint(fallbackConfig.url);
+                    setApiModel(fallbackConfig.model);
+                  }
+                  // Reset test connection status on provider changes
+                  setTestStatus('idle');
+                  setTestFeedback('');
+                }}
+                className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
+              >
+                <option value="gemini">Gemini</option>
+                <option value="openai">OpenAI</option>
+                <option value="doubao">Doubao (火山方舟)</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="claude">Claude</option>
+                <option value="openrouter">OpenRouter</option>
+                <option value="siliconflow">SiliconFlow (硅基流动)</option>
+                <option value="custom">{isZh ? '自定义 (Custom Compatible)' : 'Custom OpenAI Compatible'}</option>
+              </select>
+            </div>
+
+            {/* API Endpoint / Base URL Input */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium text-[#cca0ab]">
+                {isZh ? '基准端点 (Base URL / Endpoint)' : 'Base URL'}
               </label>
               <input
                 type="text"
                 value={apiEndpoint}
                 onChange={(e) => setApiEndpoint(e.target.value)}
-                placeholder="https://api.openai.com/v1/chat/completions"
+                placeholder="https://api.openai.com/v1"
+                className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
+              />
+            </div>
+
+            {/* Model Name Input */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium text-[#cca0ab]">
+                {isZh ? '模型名称 (Model Name)' : 'Model'}
+              </label>
+              <input
+                type="text"
+                value={apiModel}
+                onChange={(e) => setApiModel(e.target.value)}
+                placeholder="gpt-4o-mini"
                 className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
               />
             </div>
 
             {/* API Key Input */}
-            <div className="flex flex-col gap-1.5 text-left transition-all">
+            <div className="flex flex-col gap-1.5 transition-all">
               <label className="text-[11px] font-medium text-[#cca0ab] flex items-center justify-between">
                 <span>{isZh ? '接口密钥 (API Key)' : 'API Key'}</span>
               </label>
@@ -311,33 +342,103 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
             </div>
 
-            {/* Save Button */}
-            <button
-              onClick={() => {
-                const nowStr = new Date().toISOString();
-                localStorage.setItem('lumi_api_endpoint', apiEndpoint);
-                localStorage.setItem('lumi_api_key', apiKey);
-                localStorage.setItem('lumi_api_last_saved', nowStr);
-                setLastSavedTime(nowStr);
-                setIsSaved(true);
-                setTimeout(() => {
-                  setIsSaved(false);
-                }, 2000);
-              }}
-              className={`w-full h-9 rounded-xl font-medium text-xs tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 mt-2 shadow-sm cursor-pointer select-none
-                ${isSaved 
-                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 border-solid' 
-                  : 'bg-[#ff80a3] hover:bg-[#ff6290] text-white border-none'}`}
-            >
-              {isSaved ? (
-                <>
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{isZh ? '配置保存成功！' : 'Saved Successfully!'}</span>
-                </>
-              ) : (
-                <span>{isZh ? '保存 (Save)' : 'Save'}</span>
-              )}
-            </button>
+            {/* Connection Test Results Alert Banner */}
+            {testStatus !== 'idle' && (
+              <div className={`p-3 rounded-xl border border-solid text-xs text-left
+                ${testStatus === 'testing' ? 'bg-amber-50 border-amber-200 text-amber-800' : ''}
+                ${testStatus === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : ''}
+                ${testStatus === 'failed' ? 'bg-pink-50 border-pink-200 text-pink-800' : ''}
+              `}>
+                <div className="flex items-center gap-2 font-semibold mb-1">
+                  {testStatus === 'testing' && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shrink-0" />}
+                  {testStatus === 'success' && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />}
+                  {testStatus === 'failed' && <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shrink-0" />}
+                  <span>
+                    {testStatus === 'testing' && (isZh ? '正在连接测试中...' : 'Testing connection...')}
+                    {testStatus === 'success' && (isZh ? '连接测试完美通过' : 'Connection Test Passed')}
+                    {testStatus === 'failed' && (isZh ? '连接失败' : 'Connection Failed')}
+                  </span>
+                </div>
+                <p className="text-[10px] opacity-90 break-words leading-relaxed font-mono">
+                  {testFeedback}
+                </p>
+              </div>
+            )}
+
+            {/* Operation Button Grid: Test Connection & Save */}
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {/* Test Connection Button */}
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!apiKey.trim()) {
+                    setTestStatus('failed');
+                    setTestFeedback(isZh ? '请先填写 API Key！' : 'Please provide API Key.');
+                    return;
+                  }
+                  setTestStatus('testing');
+                  setTestFeedback(isZh ? `正在向 ${apiProvider} 基准端点发起握手信号验证...` : 'Sending handshake request...');
+                  try {
+                    const response = await fetch('/api/ai/test-connection', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        provider: apiProvider,
+                        apiKey: apiKey,
+                        baseUrl: apiEndpoint,
+                        model: apiModel
+                      })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                      setTestStatus('success');
+                      setTestFeedback(isZh ? `“已连接到 ${result.message.replace('已连接到 ', '')}”` : `Connected to ${apiProvider}`);
+                    } else {
+                      setTestStatus('failed');
+                      setTestFeedback(result.error || (isZh ? '验证失败，请确认端点与密令' : 'Verification failed.'));
+                    }
+                  } catch (err: any) {
+                    setTestStatus('failed');
+                    setTestFeedback(err?.message || 'Handshake failed.');
+                  }
+                }}
+                disabled={testStatus === 'testing'}
+                className="h-9 rounded-xl border border-[#ff80a3] border-solid bg-white hover:bg-[#ffeaf0]/25 text-[#ff80a3] font-medium text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors disabled:opacity-50"
+              >
+                <span>{isZh ? '测试连接 (Test)' : 'Test'}</span>
+              </button>
+
+              {/* Save Configuration Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nowStr = new Date().toISOString();
+                  localStorage.setItem('lumi_api_provider', apiProvider);
+                  localStorage.setItem('lumi_api_model', apiModel);
+                  localStorage.setItem('lumi_api_endpoint', apiEndpoint);
+                  localStorage.setItem('lumi_api_key', apiKey);
+                  localStorage.setItem('lumi_api_last_saved', nowStr);
+                  setLastSavedTime(nowStr);
+                  setIsSaved(true);
+                  setTimeout(() => {
+                    setIsSaved(false);
+                  }, 2000);
+                }}
+                className={`h-9 rounded-xl font-medium text-xs tracking-wider transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer select-none
+                  ${isSaved 
+                    ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 border-solid animate-pulse' 
+                    : 'bg-[#ff80a3] hover:bg-[#ff6290] text-white border-none'}`}
+              >
+                {isSaved ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                    <span>{isZh ? '保存成功' : 'Saved!'}</span>
+                  </>
+                ) : (
+                  <span>{isZh ? '保存配置 (Save)' : 'Save'}</span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -376,8 +477,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* 4. Minimal footer credits */}
         <div className="text-center py-4 border-t border-pink-50 text-[10px] text-neutral-400 flex flex-col items-center gap-1 mt-4">
-          <span>Lumi Glow v1.0.0 (Atmosphere Special Edit)</span>
-          <span>© 2026 App Store "Lumi Glow" Light Design Lab</span>
+          <span>Lumi v1.0.0 (Atmosphere Special Edit)</span>
+          <span>© 2026 App Store "Lumi" Light Design Lab</span>
         </div>
       </div>
     </div>

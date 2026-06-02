@@ -95,7 +95,7 @@ const getSelfieBullets = (presetId: string, isZh: boolean) => {
 };
 
 // Before / After Comparison Slider Component
-const BeforeAfterSlider: React.FC<{ activePreset: any; isZh: boolean }> = ({ activePreset, isZh }) => {
+const BeforeAfterSlider: React.FC<{ activePreset: any; isZh: boolean; isModal?: boolean }> = ({ activePreset, isZh, isModal = false }) => {
   const [sliderPos, setSliderPos] = useState<number>(50);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -123,88 +123,168 @@ const BeforeAfterSlider: React.FC<{ activePreset: any; isZh: boolean }> = ({ act
     handleMove(e.clientX);
   };
 
+  const renderSlider = () => (
+    <div 
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      onTouchMove={handleTouchMove}
+      onMouseDown={handleMouseDown}
+      className={`relative w-full overflow-hidden select-none cursor-col-resize group ${isModal ? 'h-full rounded-2xl' : 'h-[155px] rounded-xl border border-white/10 shadow-inner'}`}
+    >
+      {/* Layer 1: BEFORE (Soft Dull, Shadowed, Dark bluish/grayish filter) */}
+      <div className="absolute inset-0 bg-stone-950">
+        <img 
+          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+          alt="Before fill light"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover filter brightness-70 contrast-[1.02] grayscale-[15%] saturate-85 blur-[0.2px]"
+        />
+        {/* Bluish underexposed tint */}
+        <div className="absolute inset-0 bg-indigo-950/20 mix-blend-color-burn" />
+        
+        <span className="absolute top-3 left-3 text-[10px] font-bold bg-black/60 text-stone-300 px-2.5 py-1 rounded-md backdrop-blur-xs tracking-wider z-10 transition-opacity">
+          {isZh ? '未开启补光' : 'Before Glow'}
+        </span>
+      </div>
+
+      {/* Layer 2: AFTER (Beautifully Lit, Warm creamy/cool glow matching activePreset tint) */}
+      <div 
+        className="absolute inset-0 pointer-events-none transition-all"
+        style={{
+          clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)`
+        }}
+      >
+        <img 
+          src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
+          alt="After fill light"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover filter brightness-110 contrast-105 saturate-105"
+        />
+        {/* Dynamic soft light filter matching activePreset */}
+        <div 
+          className="absolute inset-0 mix-blend-soft-light transition-all duration-300"
+          style={{
+            backgroundColor: activePreset.color || '#FFFDF0',
+            opacity: 0.4
+          }}
+        />
+        {/* Dynamic screen bezel glow simulation */}
+        <div 
+          className="absolute inset-0 shadow-[inset_0_0_25px_rgba(255,255,255,0.4)] mix-blend-overlay transition-all duration-300"
+          style={{
+            borderColor: activePreset.color,
+          }}
+        />
+
+        <span className="absolute top-3 right-3 text-[10px] font-bold bg-indigo-600/90 text-white px-2.5 py-1 rounded-md backdrop-blur-xs tracking-wider z-10">
+          {isZh ? `已开启「${activePreset.name}」` : `${activePreset.englishName} active`}
+        </span>
+      </div>
+
+      {/* Comparison Drag Handle slider */}
+      <div 
+        className="absolute top-0 bottom-0 w-[2.5px] bg-white pointer-events-none z-20 shadow-lg"
+        style={{ left: `${sliderPos}%` }}
+      >
+        <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 px-2.5 py-1 rounded-full bg-white text-zinc-900 border border-indigo-400 text-[9px] font-extrabold tracking-tight shadow-md flex items-center justify-center gap-1.5 select-none whitespace-nowrap opacity-90 group-hover:opacity-100 transition-opacity">
+          <span>{isZh ? '◀ 前' : '◀ BEF'}</span>
+          <span className="text-[8px] text-zinc-400">|</span>
+          <span>{isZh ? '后 ▶' : 'AFT ▶'}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isModal) {
+    return renderSlider();
+  }
+
   return (
     <div className="flex flex-col gap-1.5 text-left mt-1">
       <span className="text-[10px] text-white/50 font-sans font-semibold tracking-wider flex items-center gap-1.5">
         ✨ {isZh ? '补光对比 (左右拖动滑槽)' : 'Before / After (Slide divider)'}
       </span>
-      
-      <div 
-        ref={containerRef}
-        onMouseMove={handleMouseMove}
-        onTouchMove={handleTouchMove}
-        onMouseDown={handleMouseDown}
-        className="relative w-full h-[155px] rounded-xl overflow-hidden border border-white/10 shadow-inner select-none cursor-col-resize group"
-      >
-        {/* Layer 1: BEFORE (Soft Dull, Shadowed, Dark bluish/grayish filter) */}
-        <div className="absolute inset-0 bg-stone-950">
-          <img 
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
-            alt="Before fill light"
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover filter brightness-70 contrast-[1.02] grayscale-[15%] saturate-85 blur-[0.2px]"
-          />
-          {/* Bluish underexposed tint */}
-          <div className="absolute inset-0 bg-indigo-950/20 mix-blend-color-burn" />
-          
-          <span className="absolute top-2 left-2 text-[9px] font-bold bg-black/60 text-stone-300 px-1.5 py-0.5 rounded-md backdrop-blur-xs tracking-wider z-10 transition-opacity">
-            {isZh ? '未开启补光' : 'Before Glow'}
-          </span>
-        </div>
-
-        {/* Layer 2: AFTER (Beautifully Lit, Warm creamy/cool glow matching activePreset tint) */}
-        <div 
-          className="absolute inset-0 pointer-events-none transition-all"
-          style={{
-            clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)`
-          }}
-        >
-          <img 
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80"
-            alt="After fill light"
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover filter brightness-110 contrast-105 saturate-105"
-          />
-          {/* Dynamic soft light filter matching activePreset */}
-          <div 
-            className="absolute inset-0 mix-blend-soft-light transition-all duration-300"
-            style={{
-              backgroundColor: activePreset.color || '#FFFDF0',
-              opacity: 0.4
-            }}
-          />
-          {/* Dynamic screen bezel glow simulation */}
-          <div 
-            className="absolute inset-0 shadow-[inset_0_0_25px_rgba(255,255,255,0.4)] mix-blend-overlay transition-all duration-300"
-            style={{
-              borderColor: activePreset.color,
-            }}
-          />
-
-          <span className="absolute top-2 right-2 text-[9px] font-bold bg-indigo-600/90 text-white px-1.5 py-0.5 rounded-md backdrop-blur-xs tracking-wider z-10">
-            {isZh ? `已开启「${activePreset.name}」` : `${activePreset.englishName} active`}
-          </span>
-        </div>
-
-        {/* Comparison Drag Handle slider */}
-        <div 
-          className="absolute top-0 bottom-0 w-[2px] bg-white pointer-events-none z-20 shadow-lg"
-          style={{ left: `${sliderPos}%` }}
-        >
-          <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-white text-zinc-900 border border-indigo-400 text-[8px] font-extrabold tracking-tight shadow-md flex items-center justify-center gap-1 select-none whitespace-nowrap opacity-90 group-hover:opacity-100 transition-opacity">
-            <span>{isZh ? '◀ 前' : '◀ BEF'}</span>
-            <span className="text-[7px] text-zinc-400">|</span>
-            <span>{isZh ? '后 ▶' : 'AFT ▶'}</span>
-          </div>
-        </div>
-      </div>
-      
+      {renderSlider()}
       <span className="text-[8.5px] text-white/30 text-center tracking-tight">
         {isZh ? '左右拖动中心拉杆，感受 Lumi 专属美学温润补光的变化' : 'Drag sliding lever to check the luminous luster contrast'}
       </span>
     </div>
   );
 };
+
+// Natural language scanner generator mapping environment sensors to consumer observations
+const getEnvironmentObservation = (stats: any, isZh: boolean) => {
+  if (isZh) {
+    const parts = [];
+    if (stats.brightness < 60) {
+      parts.push("当前采光环境偏暗，背阴阴影颗粒感明显");
+    } else if (stats.brightness < 115) {
+      parts.push("周围光线强度处于中性舒适区间");
+    } else {
+      parts.push("明亮日光充满周围，采光饱满充足");
+    }
+
+    if (stats.backlightRatio > 1.35) {
+      parts.push("面部背对明亮区域呈中度逆光折射");
+    } else if (stats.faceBrightness < 95) {
+      parts.push("主体面部亮度稍弱于背景，气血感微平淡");
+    } else {
+      parts.push("面颊正面着光分布均匀，各部位受光良好");
+    }
+
+    if (stats.isYellowLight || stats.warmth > 1.15) {
+      parts.push("暖色昏黄光源堆积较重");
+    } else if (stats.warmth < 0.85) {
+      parts.push("偏色蓝冰冷光感溢出");
+    } else {
+      parts.push("整体空间光泽较为纯净自然");
+    }
+
+    if (stats.skinToneWarmth > 1.1) {
+      parts.push("肤质色泽略有红润之气");
+    } else if (stats.skinToneWarmth < 0.93) {
+      parts.push("肌肤呈现微冷色底调");
+    } else {
+      parts.push("面容显示自然素净气色");
+    }
+
+    return parts.join("，") + "。";
+  } else {
+    const parts = [];
+    if (stats.brightness < 60) {
+      parts.push("Portrait surroundings are relatively dim");
+    } else if (stats.brightness < 115) {
+      parts.push("Ambient intensity lies in a comfortable standard range");
+    } else {
+      parts.push("Abundant solar glow illuminates the entire setup");
+    }
+
+    if (stats.backlightRatio > 1.35) {
+      parts.push("strong backlight shadows the face");
+    } else if (stats.faceBrightness < 95) {
+      parts.push("facial highlights look lower than backdrops");
+    } else {
+      parts.push("luminous intensity on skin matches evenly");
+    }
+
+    if (stats.isYellowLight || stats.warmth > 1.15) {
+      parts.push("warm incandescent casts cover backdrop contours");
+    } else if (stats.warmth < 0.85) {
+      parts.push("excessive cool-blue fluorescent stains detected");
+    } else {
+      parts.push("overall spectrum is clean and highly balanced");
+    }
+
+    if (stats.skinToneWarmth < 0.93) {
+      parts.push("skin tones feel slightly cooler");
+    } else {
+      parts.push("raw aesthetic complexion is nicely preserved");
+    }
+
+    return parts.join(", ") + ".";
+  }
+};
+
 import {
   Camera,
   Settings,
@@ -354,6 +434,8 @@ export default function App() {
   const [restoreMessage, setRestoreMessage] = useState<string>('');
   const [isAiPanelExpanded, setIsAiPanelExpanded] = useState<boolean>(false);
   const [isAiScanning, setIsAiScanning] = useState<boolean>(false);
+  const [showDetailedAnalysis, setShowDetailedAnalysis] = useState<boolean>(false);
+  const [showCompareSliderModal, setShowCompareSliderModal] = useState<boolean>(false);
 
   // Scene Locking & Anti-flicker states
   const [manualLockMode, setManualLockMode] = useState<boolean>(false);
@@ -1621,9 +1703,12 @@ export default function App() {
     if (isAiScanning) return;
 
     // API verification check
-    const storedEndpoint = localStorage.getItem('lumi_api_endpoint') || '';
+    const storedProvider = localStorage.getItem('lumi_api_provider') || 'gemini';
+    const storedModel = localStorage.getItem('lumi_api_model') || 'gemini-2.5-flash';
+    const storedEndpoint = localStorage.getItem('lumi_api_endpoint') || 'https://generativelanguage.googleapis.com';
     const storedKey = localStorage.getItem('lumi_api_key') || '';
-    if (!storedEndpoint || !storedKey) {
+
+    if (!storedKey) {
       playSound('focus');
       setShowApiKeyPrompt(true);
       return;
@@ -1640,7 +1725,7 @@ export default function App() {
         throw new Error(isZh ? '补光相机未加载完成，请重新打开相机设备权限。' : 'Camera not fully loaded, please check stream permission.');
       }
 
-      showToast(isZh ? '正在连接至臻 AI 视界服务器进行多维度场景分析...' : 'Connecting to AI vision engine for multi-attribute scene analysis...');
+      showToast(isZh ? `正在连接至 ${storedProvider} 智能分析服务进行多维度场景分析...` : `Connecting to ${storedProvider} for multi-attribute scene analysis...`);
 
       let report: any = null;
       let useDirectFallback = false;
@@ -1658,6 +1743,8 @@ export default function App() {
             simulatedScenario,
             apiEndpoint: storedEndpoint,
             apiKey: storedKey,
+            provider: storedProvider,
+            model: storedModel
           }),
         });
 
@@ -1769,14 +1856,7 @@ export default function App() {
             headers["Authorization"] = `Bearer ${storedKey}`;
           }
           
-          let modelName = 'gpt-4o-mini';
-          if (targetUrl.includes('deepseek')) {
-            modelName = 'deepseek-chat';
-          } else if (targetUrl.includes('anthropic') || targetUrl.includes('claude')) {
-            modelName = 'claude-3-5-sonnet';
-          } else if (targetUrl.includes('siliconflow')) {
-            modelName = 'google/gemini-2.5-flash';
-          }
+          let modelName = storedModel || 'gpt-4o-mini';
           
           bodyData = {
             model: modelName,
@@ -2344,7 +2424,7 @@ export default function App() {
               </div>
             ) : (
               /* 🎨 EXPANDED HIGH-FIDELITY ATMOSPHERE DECK */
-              <div className="w-full bg-black/35 border border-white/10 rounded-2xl p-3 shadow-xl backdrop-blur-lg flex flex-col gap-2.5">
+              <div className="w-full bg-black/35 border border-white/10 rounded-2xl p-3 shadow-xl backdrop-blur-lg flex flex-col gap-2.5 animate-fade-in text-sans">
                 
                 {/* Header: Title + Auto Apply Toggle */}
                 <div className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -2359,13 +2439,13 @@ export default function App() {
                       <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                     </span>
                     <div className="flex flex-col text-left">
-                      <span className="text-xs font-semibold text-white tracking-wider flex items-center gap-1.5">
+                      <span className="text-xs font-semibold text-white tracking-wider flex items-center gap-1.5 animate-fade-in">
                         {isZh ? 'Lumi AI 氛围自拍系统' : 'Lumi AI Ambiance System'}
-                        <span className="text-[9.5px] bg-white/5 text-white/40 group-hover/hdr:text-indigo-300 group-hover/hdr:bg-indigo-500/10 transition-all font-sans px-1.5 py-0.5 rounded-md">
+                        <span className="text-[9.5px] bg-white/5 text-white/40 group-hover/hdr:text-indigo-300 group-hover/hdr:bg-indigo-500/10 transition-all font-sans px-1.5 py-0.5 rounded-md font-bold">
                           {isZh ? '【收起】' : '【Fold】'}
                         </span>
                       </span>
-                      <span className="text-[10px] text-[#A6B5FF]/80 font-medium tracking-tight">
+                      <span className="text-[10px] text-[#A6B5FF]/80 font-medium tracking-tight mt-0.5">
                         {isZh ? '找到最适合你的自拍光线' : 'Find the best lighting for your selfie'}
                       </span>
                     </div>
@@ -2437,205 +2517,227 @@ export default function App() {
                   )}
                 </div>
 
-                {/* ✨ 实时分析卡片 (Real-time Analysis Card) */}
-                <div className="w-full flex flex-col gap-2 bg-white/5 border border-white/10 rounded-xl p-3 text-left font-sans text-xs">
-                  <div className="text-[11px] font-semibold tracking-wide text-[#A6B5FF] flex items-center gap-1.5 pb-1 border-b border-white/5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span>✨ {isZh ? '当前环境分析' : 'Current Environment Analysis'}</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-1.5 text-[11px] text-white/80">
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/40">{isZh ? '环境亮度：' : 'Ambient Light:'}</span>
-                      <span className="font-medium text-emerald-400">
-                        {ambientStats.brightness < 60 ? (isZh ? '环境偏暗' : 'Dim') : (ambientStats.brightness < 115 ? (isZh ? '亮度适中' : 'Normal') : (isZh ? '环境明亮' : 'Bright'))}
+                {/* Collapsible Report Block */}
+                {!showDetailedAnalysis ? (
+                  /* 💡 COLLAPSED DETAIL TRIGGER */
+                  <div 
+                    onClick={() => {
+                      playSound('click');
+                      setShowDetailedAnalysis(true);
+                    }}
+                    className="w-full bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/10 hover:border-indigo-500/20 py-2.5 px-4 rounded-xl flex items-center justify-between cursor-pointer transition-all active:scale-99 group text-left mt-0.5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                      <span className="text-xs font-semibold text-indigo-300 group-hover:text-white transition-colors">
+                        {isZh ? '💡 查看当前环境详细分析与定制建议' : '💡 View environmental details & custom advice'}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/40">{isZh ? '自拍状态：' : 'Selfie Status:'}</span>
-                      <span className="font-medium text-amber-300">
-                        {ambientStats.backlightRatio > 1.35 
-                          ? (isZh ? '环境逆光' : 'Backlight') 
-                          : (ambientStats.faceBrightness < 95 ? (isZh ? '面部光线不足' : 'Facial shadows detected') : (isZh ? '光线均匀明亮' : 'Even & clear'))
-                        }
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-white/40">{isZh ? '推荐方案：' : 'Recommended Scheme:'}</span>
-                      <span className="font-semibold text-indigo-300">
-                        {isZh ? `高级${recommendedPreset.name}补光` : `Premium ${recommendedPreset.englishName}`}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ✨ Lumi AI 自拍建议 (AI Recommendation Area) */}
-                <div 
-                  onClick={() => {
-                    playSound('focus');
-                    setActivePreset(recommendedPreset);
-                    setIsLightSelected(true);
-                    setImmersiveMode(true);
-                    showToast(isZh 
-                      ? `✨ Lumi 氛围补光就绪：已匹配「${recommendedPreset.name}」自拍光线！`
-                      : `✨ Lumi Selected: Applied "${recommendedPreset.englishName}" glow!`
-                    );
-                  }}
-                  className="bg-black/20 hover:bg-black/30 rounded-xl p-4 border border-indigo-500/10 flex flex-col gap-2 relative overflow-hidden text-left cursor-pointer transition-all active:scale-99 hover:border-indigo-400/20 group/advice"
-                >
-                  <div className="flex gap-2 items-center text-[11px] font-sans font-semibold tracking-wider text-indigo-300">
-                    <span>✨</span>
-                    <span>{isZh ? 'Lumi AI 自拍建议' : 'Lumi AI Selfie Advisory'}</span>
-                    <span className="ml-auto text-[8.5px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 px-1.5 py-0.5 rounded-md opacity-80 group-hover/advice:opacity-100 transition-opacity">
-                      {isZh ? '进入极简发光 ↗' : 'Minimal Light Surface ↗'}
+                    <span className="text-[10px] text-indigo-400 font-bold group-hover:translate-x-0.5 transition-transform">
+                      {isZh ? '展开 ∨' : 'Expand ∨'}
                     </span>
                   </div>
-
-                  <div className="flex flex-col gap-1.5 mt-1">
-                    <p className="text-[12px] font-semibold text-emerald-300">
-                      {isZh ? `已为你推荐「${recommendedPreset.name}」` : `Recommended "${recommendedPreset.englishName}"`}
-                    </p>
-                    <div className="flex flex-col gap-1 pl-1">
-                      {getSelfieBullets?.(recommendedPreset.id, isZh)?.map((bullet: string, idx: number) => (
-                        <div key={idx} className="flex items-center gap-1.5 text-[11px] text-white/85">
-                          <span className="text-[9px] text-indigo-300 select-none">•</span>
-                          <span>{bullet}</span>
-                        </div>
-                      ))}
+                ) : (
+                  /* 🔍 EXPANDED THREE MAIN CONSUMER SECTIONS IN MANDATED SEQUENCE */
+                  <div className="w-full flex flex-col gap-2.5 bg-black/15 border border-white/5 rounded-xl p-2.5 animate-fade-in text-sans">
+                    
+                    <div 
+                      onClick={() => {
+                        playSound('click');
+                        setShowDetailedAnalysis(false);
+                      }}
+                      className="w-full pb-1 border-b border-white/5 flex items-center justify-between cursor-pointer text-left"
+                    >
+                      <span className="text-xs font-bold text-indigo-300">
+                        {isZh ? '✨ Lumi 智能自拍环境报告' : '✨ Lumi Smart Ambient Report'}
+                      </span>
+                      <span className="text-[10px] text-white/40 hover:text-white transition-colors">
+                        {isZh ? '【收起分析】 ︿' : '【Fold】 ︿'}
+                      </span>
                     </div>
-                  </div>
 
-                  {/* If Auto Apply is off, show the manual apply button */}
-                  {!preferences.autoApply && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
+                    {/* Section 1: 当前环境分析 */}
+                    <div className="w-full flex flex-col gap-1.5 bg-white/5 border border-white/10 rounded-xl p-3 text-left">
+                      <div className="text-[11px] font-semibold text-[#A6B5FF] flex items-center gap-1.5 pb-1 border-b border-white/5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>{isZh ? '当前自拍环境感知' : 'Ambient Perception'}</span>
+                      </div>
+                      <p className="text-[11.5px] text-white/90 leading-relaxed font-normal">
+                        {getEnvironmentObservation(ambientStats, isZh)}
+                      </p>
+                    </div>
+
+                    {/* Section 2: Lumi AI 建议 */}
+                    <div 
+                      onClick={() => {
                         playSound('focus');
                         setActivePreset(recommendedPreset);
                         setIsLightSelected(true);
                         setImmersiveMode(true);
                         showToast(isZh 
-                          ? `✨ 已为您一键应用「${recommendedPreset.name}」自拍补光！` 
-                          : `✨ Applied optimized 「${recommendedPreset.englishName}」 lighting!`
+                          ? `✨ Lumi 氛围补光就绪：已匹配「${recommendedPreset.name}」自拍光线！`
+                          : `✨ Lumi Selected: Applied "${recommendedPreset.englishName}" glow!`
                         );
                       }}
-                      className="w-full mt-2 px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-[10px] text-white font-sans font-bold tracking-wider cursor-pointer shadow-md transition-all active:scale-98"
+                      className="bg-black/20 hover:bg-black/30 rounded-xl p-3.5 border border-indigo-500/10 hover:border-indigo-400/20 flex flex-col gap-1.5 text-left cursor-pointer transition-all active:scale-99 group/advice"
                     >
-                      💡 {isZh ? `一键优化自拍光线` : `Optimize Selfie Lighting`}
-                    </button>
-                  )}
-                </div>
+                      <div className="flex gap-2 items-center text-[10.5px] font-semibold tracking-wider text-indigo-300">
+                        <span>💡</span>
+                        <span>{isZh ? 'Lumi AI 定制建议' : 'Lumi AI Custom Advice'}</span>
+                        <span className="ml-auto text-[8.5px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 px-1.5 py-0.5 rounded-md opacity-80 group-hover/advice:opacity-100 transition-opacity font-bold">
+                          {isZh ? '一键匹配并亮起 ↗' : 'Apply & Glow ↗'}
+                        </span>
+                      </div>
 
-                {/* ✨ 新增 Before / After 对比 Slider Card */}
-                <BeforeAfterSlider activePreset={recommendedPreset} isZh={isZh} />
+                      <div className="flex flex-col gap-1.5 mt-0.5">
+                        <p className="text-[12.5px] font-extrabold text-emerald-300">
+                          {isZh ? `专属推荐方案「${recommendedPreset.name}」` : `Recommended "${recommendedPreset.englishName}"`}
+                        </p>
+                        <p className="text-[12px] text-white/90 leading-relaxed font-medium">
+                          {isZh ? recommendedInfo.adviceZh : recommendedInfo.adviceEn}
+                        </p>
+                        <div className="flex flex-col gap-1 pl-1 mt-1 border-t border-white/5 pt-1.5">
+                          {getSelfieBullets?.(recommendedPreset.id, isZh)?.map((bullet: string, idx: number) => (
+                            <div key={idx} className="flex items-center gap-1.5 text-[11px] text-white/70 animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
+                              <span className="text-[8px] text-indigo-300 select-none">•</span>
+                              <span>{bullet}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Row 2: Aesthetic Preference Segment (Style Selection) */}
-                <div className="flex flex-col gap-1 text-left bg-black/10 rounded-xl p-2.5 border border-white/5 mt-1">
-                  <span className="text-[10px] text-white/50 font-sans font-semibold tracking-wider mb-1">
-                    🎨 {isZh ? '自拍风格选择' : 'Style Presets Preference'}
-                  </span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      onClick={() => {
-                        playSound('click');
-                        setPreferences(prev => ({ ...prev, styleMode: 'natural' }));
-                      }}
-                      className={`py-2 px-1.5 rounded-xl flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all duration-200 active:scale-95 ${
-                        preferences.styleMode === 'natural'
-                          ? 'bg-white text-neutral-900 border-white shadow-sm font-bold'
-                          : 'bg-white/5 hover:bg-white/10 text-white/70 border-transparent'
-                      }`}
-                    >
-                      <span className="text-[11px] font-semibold">{isZh ? '原生感' : 'Natural'}</span>
-                      <span className={`text-[8.5px] ${preferences.styleMode === 'natural' ? 'text-black/60' : 'text-white/40'} font-medium`}>
-                        {isZh ? '自然真实' : 'Raw & Real'}
+                    {/* Section 3: 自拍风格选择 */}
+                    <div className="flex flex-col gap-1 text-left bg-black/10 rounded-xl p-2.5 border border-white/5">
+                      <span className="text-[10px] text-white/50 font-semibold tracking-wider mb-1">
+                        🎨 {isZh ? '自拍风格定制倾向' : 'Personal Style Bias'}
                       </span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        playSound('click');
-                        setPreferences(prev => ({ ...prev, styleMode: 'cool_tech' }));
-                      }}
-                      className={`py-2 px-1.5 rounded-xl flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all duration-200 active:scale-95 ${
-                        preferences.styleMode === 'cool_tech'
-                          ? 'bg-white text-neutral-900 border-white shadow-sm font-bold'
-                          : 'bg-white/5 hover:bg-white/10 text-white/70 border-transparent'
-                      }`}
-                    >
-                      <span className="text-[11px] font-semibold">{isZh ? '冷白感' : 'Ice Glow'}</span>
-                      <span className={`text-[8.5px] ${preferences.styleMode === 'cool_tech' ? 'text-black/60' : 'text-white/40'} font-medium`}>
-                        {isZh ? '清透提亮' : 'Cool Bright'}
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        playSound('click');
-                        setPreferences(prev => ({ ...prev, styleMode: 'glamorous' }));
-                      }}
-                      className={`py-2 px-1.5 rounded-xl flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all duration-200 active:scale-95 ${
-                        preferences.styleMode === 'glamorous'
-                          ? 'bg-white text-neutral-900 border-white shadow-sm font-bold'
-                          : 'bg-white/5 hover:bg-white/10 text-white/70 border-transparent'
-                      }`}
-                    >
-                      <span className="text-[11px] font-semibold">{isZh ? '氛围感' : 'Vibe Portrait'}</span>
-                      <span className={`text-[8.5px] ${preferences.styleMode === 'glamorous' ? 'text-black/60' : 'text-white/40'} font-medium`}>
-                        {isZh ? '柔和电影感' : 'Soft Filmic'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Row 4: Expandable Simulation Controls Sub-panel */}
-                <div className="flex flex-col gap-1 text-left border-t border-white/5 pt-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-white/40 font-sans font-semibold tracking-wider flex items-center gap-1">
-                      🔧 {isZh ? '模拟不同自拍环境（调试）' : 'Aesthetic Simulation Sandbox'}
-                    </span>
-                    <button
-                      onClick={() => {
-                        playSound('click');
-                        setSimulatedScenario(simulatedScenario === 'none' ? 'dull' : 'none');
-                      }}
-                      className="text-[9.5px] text-[#A6B5FF] hover:text-white font-sans font-bold transition-colors"
-                    >
-                      {simulatedScenario !== 'none' ? (isZh ? '关闭环境模拟' : 'Close Ambient') : (isZh ? '环境模拟 🔧' : 'Simulate 🔧')}
-                    </button>
-                  </div>
-
-                  {simulatedScenario !== 'none' && (
-                    <div className="w-full flex gap-1 py-1 overflow-x-auto scrollbar-none snap-x justify-start mt-0.5">
-                      {AMB_SCENARIOS.map((scen) => (
+                      <div className="grid grid-cols-3 gap-1.5">
                         <button
-                          key={scen.id}
                           onClick={() => {
                             playSound('click');
-                            setSimulatedScenario(scen.id);
-                            setAmbientStats({ brightness: scen.brightness, warmth: scen.warmth });
+                            setPreferences(prev => ({ ...prev, styleMode: 'natural' }));
                           }}
-                          className={`flex-shrink-0 snap-center min-w-[76px] px-2 py-1 flex flex-col items-center gap-0.5 border rounded-lg text-[9px] font-sans cursor-pointer transition-all duration-200 ${
-                            simulatedScenario === scen.id
-                              ? 'bg-white text-neutral-900 border-white font-extrabold shadow-sm scale-102'
-                              : 'bg-white/5 text-white/70 border-white/5 hover:bg-white/10 hover:text-white'
+                          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all duration-200 active:scale-95 ${
+                            preferences.styleMode === 'natural'
+                              ? 'bg-white text-neutral-900 border-white shadow-sm font-bold'
+                              : 'bg-white/5 hover:bg-white/10 text-white/70 border-transparent'
                           }`}
                         >
-                          <span className="text-xs leading-none">{scen.icon}</span>
-                          <span className="tracking-tight font-medium text-[8.5px]">{isZh ? scen.name : scen.englishName}</span>
+                          <span className="text-[11px] font-semibold">{isZh ? '原生感' : 'Natural'}</span>
+                          <span className={`text-[8px] ${preferences.styleMode === 'natural' ? 'text-black/60' : 'text-white/40'} font-medium`}>
+                            {isZh ? '自然真实' : 'Raw & Real'}
+                          </span>
                         </button>
-                      ))}
-                      <button
+                        <button
+                          onClick={() => {
+                            playSound('click');
+                            setPreferences(prev => ({ ...prev, styleMode: 'cool_tech' }));
+                          }}
+                          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all duration-200 active:scale-95 ${
+                            preferences.styleMode === 'cool_tech'
+                              ? 'bg-white text-neutral-900 border-white shadow-sm font-bold'
+                              : 'bg-white/5 hover:bg-white/10 text-white/70 border-transparent'
+                          }`}
+                        >
+                          <span className="text-[11px] font-semibold">{isZh ? '冷白感' : 'Ice Glow'}</span>
+                          <span className={`text-[8px] ${preferences.styleMode === 'cool_tech' ? 'text-black/60' : 'text-white/40'} font-medium`}>
+                            {isZh ? '清透提亮' : 'Cool Bright'}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            playSound('click');
+                            setPreferences(prev => ({ ...prev, styleMode: 'glamorous' }));
+                          }}
+                          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all duration-200 active:scale-95 ${
+                            preferences.styleMode === 'glamorous'
+                              ? 'bg-white text-neutral-900 border-white shadow-sm font-bold'
+                              : 'bg-white/5 hover:bg-white/10 text-white/70 border-transparent'
+                          }`}
+                        >
+                          <span className="text-[11px] font-semibold">{isZh ? '氛围感' : 'Vibe Portrait'}</span>
+                          <span className={`text-[8px] ${preferences.styleMode === 'glamorous' ? 'text-black/60' : 'text-white/40'} font-medium`}>
+                            {isZh ? '柔和电影感' : 'Soft Filmic'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Section 4: 环境模拟 */}
+                    <div className="flex flex-col gap-1 text-left border-t border-white/5 pt-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] text-white/40 font-semibold tracking-wider flex items-center gap-1">
+                          🔧 {isZh ? '自拍环境仿真模拟（调测）' : 'Simulate Light Scenarios'}
+                        </span>
+                        <button
+                          onClick={() => {
+                            playSound('click');
+                            setSimulatedScenario(simulatedScenario === 'none' ? 'dull' : 'none');
+                          }}
+                          className="text-[9.5px] text-[#A6B5FF] hover:text-white font-bold transition-colors"
+                        >
+                          {simulatedScenario !== 'none' ? (isZh ? '关闭模拟' : '环境模拟 🔧') : (isZh ? '环境模拟 🔧' : 'Simulate 🔧')}
+                        </button>
+                      </div>
+
+                      {simulatedScenario !== 'none' && (
+                        <div className="w-full flex gap-1 py-1 overflow-x-auto scrollbar-none snap-x justify-start mt-0.5">
+                          {AMB_SCENARIOS.map((scen) => (
+                            <button
+                              key={scen.id}
+                              onClick={() => {
+                                playSound('click');
+                                setSimulatedScenario(scen.id);
+                                setAmbientStats({ brightness: scen.brightness, warmth: scen.warmth });
+                              }}
+                              className={`flex-shrink-0 snap-center min-w-[76px] px-2 py-1 flex flex-col items-center gap-0.5 border rounded-lg text-[9px] font-sans cursor-pointer transition-all duration-200 ${
+                                simulatedScenario === scen.id
+                                  ? 'bg-white text-neutral-900 border-white font-extrabold shadow-sm scale-102'
+                                  : 'bg-white/5 text-white/70 border-white/5 hover:bg-white/10 hover:text-white'
+                              }`}
+                            >
+                              <span className="text-xs leading-none">{scen.icon}</span>
+                              <span className="tracking-tight font-medium text-[8.5px]">{isZh ? scen.name : scen.englishName}</span>
+                            </button>
+                          ))}
+                          <button
+                            onClick={() => {
+                              playSound('click');
+                              setSimulatedScenario('none');
+                              setAmbientStats({ brightness: 110, warmth: 1.0 });
+                            }}
+                            className="flex-shrink-0 snap-center min-w-[70px] px-2 py-1 flex flex-col items-center gap-0.5 bg-red-400/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 cursor-pointer transition-all rounded-lg text-[9px] font-sans"
+                          >
+                            <span className="text-xs leading-none">🔄</span>
+                            <span className="tracking-tight font-medium text-[8.5px]">{isZh ? '重置亮度' : 'Reset'}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Section 5: 补光效果对比 (折叠卡片/全屏对比) */}
+                    <div className="border-t border-white/5 pt-2 flex flex-col">
+                      <button 
                         onClick={() => {
                           playSound('click');
-                          setSimulatedScenario('none');
-                          setAmbientStats({ brightness: 110, warmth: 1.0 });
+                          setShowCompareSliderModal(true);
                         }}
-                        className="flex-shrink-0 snap-center min-w-[70px] px-2 py-1 flex flex-col items-center gap-0.5 bg-red-400/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 cursor-pointer transition-all rounded-lg text-[9px] font-sans"
+                        className="w-full py-2.5 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/15 text-indigo-300 font-sans text-xs font-bold border border-indigo-500/20 active:scale-98 transition-all flex items-center justify-between group cursor-pointer"
                       >
-                        <span className="text-xs leading-none">🔄</span>
-                        <span className="tracking-tight font-medium text-[8.5px]">{isZh ? '重置亮度' : 'Reset'}</span>
+                        <span className="flex items-center gap-1.5">
+                          <span>📷</span>
+                          <span>{isZh ? '查看补光对比 (全屏前后对比)' : 'View Lighting Contrast'}</span>
+                        </span>
+                        <span className="text-[10px] text-indigo-400 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
+                          <span>{isZh ? '点击弹出' : 'Tap to expand'}</span>
+                          <span>→</span>
+                        </span>
                       </button>
                     </div>
-                  )}
-                </div>
+
+                  </div>
+                )}
 
                 {/* Collapse Button at the bottom of the deck */}
                 <button
@@ -2805,7 +2907,7 @@ export default function App() {
               <div className="flex items-center justify-between text-white border-b border-white/10 pb-2.5">
                 <div className="flex items-center gap-2">
                   <Award className="w-4 h-4 text-[#ff8fae]" />
-                  <span className="text-xs font-semibold tracking-wider">Lumi Glow 专属摄影胶片册</span>
+                  <span className="text-xs font-semibold tracking-wider">Lumi 专属摄影胶片册</span>
                 </div>
                 <div className="flex items-center gap-2.5">
                   {photoToRender && (
@@ -2872,7 +2974,7 @@ export default function App() {
               {photoToRender && (
                 <div className="text-center space-y-1 py-1.5 animate-fade-in">
                   <div className="text-[10px] text-pink-300 font-sans tracking-widest font-bold uppercase">
-                    {showOriginal ? (isZh ? 'ORIGINAL FEED / 原始镜头' : 'ORIGINAL FEED') : (isZh ? 'Lumi Glow 美颜自拍' : 'LUMI GLOW BEAUTY OPTIMIZED')}
+                    {showOriginal ? (isZh ? 'ORIGINAL FEED / 原始镜头' : 'ORIGINAL FEED') : (isZh ? 'Lumi 美颜自拍' : 'LUMI BEAUTY OPTIMIZED')}
                   </div>
                   <h4 className="text-xs font-semibold tracking-wide text-white/95">
                     {showOriginal ? (

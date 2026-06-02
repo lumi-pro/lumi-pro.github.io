@@ -613,9 +613,9 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
 
       {/* Real-time AI Vision Sensor HUD Overlay */}
       {aiDiagnostic && (
-        <div className="absolute inset-0 z-30 pointer-events-none select-none font-mono">
+        <div className="absolute inset-0 z-30 pointer-events-none select-none font-sans">
           {/* Scanning Box Corner brackets */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-44 border border-indigo-500/25 rounded-md flex items-center justify-center">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-44 border border-indigo-500/20 rounded-md flex items-center justify-center">
             {/* Real-time scanning line */}
             <div className="absolute w-full h-[1.5px] bg-[#10B981] shadow-[0_0_8px_rgba(16,185,129,0.9)] animate-[scan_2.5s_infinite_linear]" />
             
@@ -625,32 +625,9 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
             <div className="absolute bottom-0 left-0 w-3 h-3 border-b-2 border-l-2 border-[#10B981]" />
             <div className="absolute bottom-0 right-0 w-3 h-3 border-b-2 border-r-2 border-[#10B981]" />
             
-            <span className="absolute -top-4 text-[7px] text-[#10B981] font-bold tracking-widest bg-black/50 px-1 py-0.5 rounded backdrop-blur-xs">
-              AI PORTRAIT RECOGNIZER
+            <span className="absolute -top-4 text-[7px] text-[#10B981] font-bold tracking-widest bg-black/60 px-2 py-0.5 rounded backdrop-blur-xs">
+              {language === 'zh' ? '✨ 智能人脸对焦极速捕捉中' : '✨ OPTICAL FOCUS ACTIVE'}
             </span>
-            <span className="absolute -bottom-4 text-[7px] text-white/50 tracking-tight whitespace-nowrap bg-black/50 px-1 rounded-sm">
-              EYE: {useSimulatedPortrait ? 88 : underEyeShadow}% | EXP: {useSimulatedPortrait ? 115 : faceBrightness} LUX
-            </span>
-          </div>
-
-          {/* Left info rail */}
-          <div className="absolute left-2 top-2 flex flex-col gap-0.5 text-[7px] text-indigo-300 font-bold bg-black/50 backdrop-blur-xs p-1.5 rounded border border-white/5">
-            <div className="flex items-center gap-1 border-b border-indigo-500/20 pb-0.5 mb-0.5">
-              <span className="w-1 h-1 rounded-full bg-emerald-400 animate-ping" />
-              <span className="text-[#10B981]">LIVE VIEW</span>
-            </div>
-            <div>FACE: <span className="text-white font-medium">{useSimulatedPortrait ? 125 : faceBrightness || 120}cd</span></div>
-            <div>BG: <span className="text-white font-medium">{useSimulatedPortrait ? 115 : bgBrightness || 110}cd</span></div>
-            <div>RATIO: <span className={`font-medium ${backlightRatio > 1.35 ? 'text-amber-400' : 'text-emerald-400'}`}>{useSimulatedPortrait ? 'NORMAL' : (backlightRatio > 1.35 ? 'BACKLIGHT' : 'NORMAL')}</span></div>
-            <div>LIGHT: <span className="text-white font-medium">{useSimulatedPortrait ? '5200K' : (isYellowLight ? '3200K (WARM)' : '5600K (COOL)')}</span></div>
-          </div>
-
-          {/* Right state rail */}
-          <div className="absolute right-2 top-2 flex flex-col gap-0.5 text-[7px] text-white/40 text-right bg-black/50 backdrop-blur-xs p-1 rounded">
-            <div>MAT_16x16</div>
-            <div>CONTRAST: <span className="text-white/60">{useSimulatedPortrait ? '30' : contrastRatio}%</span></div>
-            <div>SKIN_TEMP: <span className="text-white/60">{useSimulatedPortrait ? '1.02' : skinToneWarmth} R/B</span></div>
-            <div>SHADOWS: <span className="text-emerald-400">{useSimulatedPortrait ? 'BALANCED' : (underEyeShadow < 90 ? 'UNDER-EYE DRIFT' : 'BALANCED')}</span></div>
           </div>
 
           {/* Loading scan state */}
@@ -658,7 +635,7 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
             <div className="absolute inset-0 bg-indigo-950/30 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-2 transition-all">
               <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />
               <span className="text-[10px] tracking-widest text-[#A6B5FF] uppercase font-bold animate-pulse">
-                {language === 'zh' ? '正在连接 AI 视界服务器...' : 'LUMI AI SCANNING...'}
+                {language === 'zh' ? '正在智能生成最美补光方案...' : 'LUMI AI ANALYZING ENVIRONMENT...'}
               </span>
             </div>
           )}

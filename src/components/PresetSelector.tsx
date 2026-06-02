@@ -80,10 +80,6 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
     return cat === selectedCategory;
   });
 
-  const activeVibeText = splitMode !== 'none'
-    ? `${isZh ? '左右分屏配方' : 'Split Light'} : ${splitPresetLeft.name} ✕ ${splitPresetRight.name}`
-    : activePreset.vibeQuote;
-
   return (
     <div className="w-full flex flex-col gap-1.5 px-2 py-2 select-none text-left">
       
@@ -214,9 +210,6 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
           {splitMode !== 'none'
             ? `${isZh ? '分屏校准 · [双源微调]' : 'SPLIT MODE · CALIBRATED'}`
             : (isZh ? '高级人像漫反射 · LUMI AI' : 'PORTRAIT DIFFUSION // LUMI AI')}
-        </span>
-        <span className="font-serif italic text-right max-w-[65%] truncate">
-          {activeVibeText}
         </span>
       </div>
 

@@ -246,10 +246,12 @@ app.post("/api/gemini/analyze", async (req, res) => {
     reasoningEn: "✨ [Lumi Local Synced] Automatically tuned lighting parameters from active sensors. Tap Settings to plug in your AI Provider for full fashion photographer diagnostic recommendations!"
   };
 
-  // If no credentials are provided in either request body or server ENV, return clean sensor fallback right away, without failing "busy"
   const activeKey = apiKey || (provider === "gemini" || !provider ? process.env.GEMINI_API_KEY : "");
   if (!activeKey) {
-    return res.json(localFallbackReport);
+    return res.status(403).json({
+      error: true,
+      message: "API Key 未配置。请在设置中填写您的 API Key 后重试。"
+    });
   }
 
   try {
@@ -553,29 +555,13 @@ app.post("/api/gemini/analyze", async (req, res) => {
     res.json(parsedData);
 
   } catch (apiError: any) {
-    console.warn("Lumi Vision API error, triggering helpful diagnostic mode:", apiError?.message || apiError);
+    console.warn("Lumi Vision API error:", apiError?.message || apiError);
 
-    // Provide a helpful system explanation indicating the error and provider state instead of just saying "cloud is busy"
-    const displayMessageZh = `✨ [Lumi AI 异常自检] 无法调用您配置的 ${provider || 'AI'} 接口。错误提示: "${apiError?.message || 'Unauthorized Key or network timeout'}"。请点击右上角「设置」检查您的 API Key 或是 Base URL 端点配置后重试。目前已为您启动本地重力防抖补偿补光：`;
-    const displayMessageEn = `✨ [Lumi AI Diagnostic] Unable to trace connection to your ${provider || 'AI'} provider. Message: "${apiError?.message || 'Access Denied'}" Please double check keys in top-right Settings. Active local responsive tuning running:`;
-
-    const errSummaryZh = `由于 AI 服务链接中断（原因：${apiError?.message || '网络连接失效或无效 Key'}），Lumi 已为您顺畅切入本地微晶体传感器微调保护系统`;
-
-    const errorFallback = {
-      skinTone: "已通过多维传感器自习惯分析人像补光",
-      brightness: "已自动调节至护眼黄金自研照度",
-      shadows: "已自动减弱多角度细屑阴影，均匀填补泪沟",
-      sceneCharacteristics: `Lumi 智能光控系统：自适应环境 (${simulatedScenario || '默认室内'})`,
-      problems: errSummaryZh,
-      recommendedPresetId: fallbackPreset,
-      recommendedIntensity: "normal",
-      targetBrightness: preferences?.averageBrightness || 0.80,
-      targetSoftness: preferences?.averageSoftness || 0.70,
-      reasoningZh: displayMessageZh,
-      reasoningEn: displayMessageEn
-    };
-
-    res.json(errorFallback);
+    res.status(502).json({
+      error: true,
+      message: apiError?.message || "Unknown API error",
+      provider: provider || "unknown"
+    });
   }
 });
 

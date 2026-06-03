@@ -53,23 +53,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   ];
   if (!availableIds.includes(fallbackPreset)) fallbackPreset = "cream";
 
-  const localFallbackReport = {
-    skinTone: "已通过设备多维传感器现场估测分析面部光影",
-    brightness: "已自适应调节完美补光环境占比",
-    shadows: "已自动减弱面角细滑阴影，柔和填充眼眶泪沟",
-    sceneCharacteristics: `Lumi 智能光控系统：自适应环境 (${simulatedScenario || '默认室内'})`,
-    problems: "💡 传感器智控：由于您的 AI 接口尚未配置 API Key，已自动切入设备本地多维传感器自控补光。",
-    recommendedPresetId: fallbackPreset,
-    recommendedIntensity: "normal",
-    targetBrightness: preferences?.averageBrightness || 0.80,
-    targetSoftness: preferences?.averageSoftness || 0.70,
-    reasoningZh: "✨ [Lumi 本地智选] 已自动读取手机传感器姿态与周围采光指标，自适应为您配对经典契合方案。",
-    reasoningEn: "✨ [Lumi Local Synced] Automatically tuned lighting parameters from active sensors."
-  };
-
   const activeKey = apiKey || (provider === "gemini" || !provider ? process.env.GEMINI_API_KEY : "");
   if (!activeKey) {
-    return res.status(200).json(localFallbackReport);
+    return res.status(403).json({
+      error: true,
+      message: "API Key 未配置。请在设置中填写您的 API Key 后重试。"
+    });
   }
 
   try {
@@ -302,20 +291,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (apiError: any) {
     console.warn("Lumi Vision API error:", apiError?.message);
 
-    const errReport = {
-      skinTone: "已通过多维传感器自习惯分析人像补光",
-      brightness: "已自动调节至护眼黄金自研照度",
-      shadows: "已自动减弱多角度细屑阴影，均匀填补泪沟",
-      sceneCharacteristics: `Lumi 智能光控系统：自适应环境 (${simulatedScenario || '默认室内'})`,
-      problems: `AI 服务链接中断（${apiError?.message || '网络连接失效或无效 Key'}），已切入本地传感器微调保护系统`,
-      recommendedPresetId: fallbackPreset,
-      recommendedIntensity: "normal",
-      targetBrightness: preferences?.averageBrightness || 0.80,
-      targetSoftness: preferences?.averageSoftness || 0.70,
-      reasoningZh: `✨ [Lumi AI 异常自检] 无法调用您配置的 ${provider || 'AI'} 接口。错误: "${apiError?.message || 'Unknown'}"。请检查设置中的 API Key 和端点配置。`,
-      reasoningEn: `✨ [Lumi AI Diagnostic] Unable to connect to ${provider || 'AI'} provider. Error: "${apiError?.message || 'Unknown'}". Please check your API Key and endpoint in Settings.`
-    };
-
-    return res.status(200).json(errReport);
+    return res.status(502).json({
+      error: true,
+      message: apiError?.message || "Unknown API error",
+      provider: provider || "unknown"
+    });
   }
 }

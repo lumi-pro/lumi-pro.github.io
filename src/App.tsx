@@ -1944,49 +1944,14 @@ export default function App() {
     } catch (err: any) {
       console.error('Lumi Vision API failed:', err);
       
-      // Smart Fallback Recommendation Response inside client in case both call avenues failed:
-      let fallbackPreset = preferences?.favoritePresetId || "cream";
-      if (ambientStats) {
-        const isDark = (ambientStats.brightness || 100) < 60;
-        const isWarm = (ambientStats.warmth || 1.0) > 1.15;
-        if (isWarm) {
-          fallbackPreset = "cold"; // neutralize warm ambient glow with ice white
-        } else if (isDark) {
-          fallbackPreset = "moonlight"; // moonlight blue atmospheric glow
-        }
-      }
-      
-      const localReport = {
-        skinTone: "已为您智能微调自拍色光比例",
-        brightness: "已自动微调最佳自拍亮度层次",
-        shadows: "已自动均匀弱化面部暗沉与多余阴影",
-        sceneCharacteristics: `Lumi 智能光感控制：自动适配环境`,
-        problems: `自适应校准 (已启用本地精调模式)`,
-        recommendedPresetId: fallbackPreset,
-        recommendedIntensity: "normal" as any,
-        targetBrightness: preferences?.averageBrightness ? preferences.averageBrightness / 100 : 0.80,
-        targetSoftness: preferences?.averageSoftness ? preferences.averageSoftness / 100 : 0.70,
-        reasoningZh: "✨ [Lumi 智能自适应补光] 正在使用本地智能自适应控光程序，已为您精准匹配最佳光美学方案，护航完美出片！",
-        reasoningEn: "✨ [Lumi Local Calibration] Device auto-lighting triggered. Lumi auto-selected the best natural spectrum based on your ambient tone to guarantee a stunning photograph."
-      };
-      
-      setAiReport(localReport);
+      setAiReport(null);
       setManualLockMode(false);
       setLockedStats(null);
       
-      const pres = FILL_LIGHT_PRESETS.find(p => p.id === localReport.recommendedPresetId);
-      if (pres) {
-        setActivePreset(pres);
-        setIsLightSelected(true);
-      }
-      setBrightness(localReport.targetBrightness);
-      setSoftness(localReport.targetSoftness);
-      setIntensityLevel(localReport.recommendedIntensity);
-      
       playSound('focus');
       showToast(isZh 
-        ? "✨ 已为您自动降级至设备端高精光感推荐参数！" 
-        : "✨ Local sensor calibration auto-applied as fallback!"
+        ? `⚠️ AI 调用失败：${err?.message || '网络异常'}。请检查设置中的 API 配置。` 
+        : `⚠️ AI call failed: ${err?.message || 'Network error'}. Please check your API config in Settings.`
       );
     } finally {
       setIsAiScanning(false);

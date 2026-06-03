@@ -1991,9 +1991,20 @@ export default function App() {
     showToast(isZh ? "💾 正在生成至臻奶油肌自拍照并打包下载..." : "Generating premium studio portrait for download...");
     
     try {
+      const sourceSrc = photo.photoUrl || "/src/assets/images/portrait_simulate_1779326784414.png";
+      
+      const img = new Image();
+      img.src = sourceSrc;
+      img.crossOrigin = "anonymous";
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+
+      const width = img.naturalWidth || 1440;
+      const height = img.naturalHeight || 1920;
+      
       const canvas = document.createElement('canvas');
-      const width = 1080;
-      const height = 1440;
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
@@ -2001,16 +2012,6 @@ export default function App() {
         throw new Error('Canvas 2D context not available');
       }
 
-      // Load base image/frame
-      const img = new Image();
-      img.src = photo.photoUrl || "/src/assets/images/portrait_simulate_1779326784414.png";
-      img.crossOrigin = "anonymous"; // avoid tainted canvas issues
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = resolve; // avoid freezing if image loading fails
-      });
-
-      // 1. Draw base picture with active camera filter adjustments
       ctx.save();
       const contrastPct = 96 - (photo.softness - 0.5) * 8;
       const saturatePct = 103 + (photo.brightness - 0.5) * 6;
@@ -2019,7 +2020,6 @@ export default function App() {
       ctx.drawImage(img, 0, 0, width, height);
       ctx.restore();
 
-      // 2. Mist smoothing bloom blur layer
       if (photo.softness > 0.1) {
         ctx.save();
         ctx.filter = `contrast(${contrastPct}%) saturate(${saturatePct}%) brightness(${exposureBoost}) blur(6px)`;
@@ -2029,7 +2029,6 @@ export default function App() {
         ctx.restore();
       }
 
-      // 4. Premium Under-eye & shadow corrector vector glow mix-blend-overlay
       ctx.save();
       ctx.globalCompositeOperation = 'overlay';
       ctx.globalAlpha = photo.brightness * photo.softness * 0.5;
@@ -2041,7 +2040,6 @@ export default function App() {
       ctx.fillRect(0, 0, width, height);
       ctx.restore();
 
-      // 5. Subtle skin smoothing glow halo booster mix-blend-soft-light
       ctx.save();
       ctx.globalCompositeOperation = 'soft-light';
       ctx.globalAlpha = photo.brightness * 0.4;
@@ -2052,13 +2050,9 @@ export default function App() {
       ctx.fillRect(0, 0, width, height);
       ctx.restore();
 
-      // 6. Watermark decoration removed as requested by the user
-      // No logo, dates, or filter parameters will be printed on the final capture.
-
-      // Trigger automatic save download
       const link = document.createElement('a');
       link.download = `LUMI_GLOW_${photo.id}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.96);
+      link.href = canvas.toDataURL('image/jpeg', 1.0);
       link.click();
       
       setTimeout(() => {

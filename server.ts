@@ -15,10 +15,11 @@ const PORT = 3000;
 function supportsVision(provider: string, model: string): boolean {
   const p = (provider || "").toLowerCase();
   const m = (model || "").toLowerCase();
-  if (p === "deepseek") return false;
+  if (p === "deepseek" || p === "custom" || p === "doubao") return false;
   if (m.includes("deepseek-chat") || m.includes("deepseek-r1") || m.includes("deepseek-v3") || m.includes("reasoner")) {
     return false;
   }
+  if (m.includes("qwen") && !m.includes("vl") && !m.includes("vision")) return false;
   return true;
 }
 
@@ -514,7 +515,7 @@ app.post("/api/gemini/analyze", async (req, res) => {
       };
 
       // Add json object support if supported
-      if (prov !== "openrouter") {
+      if (prov !== "openrouter" && prov !== "custom") {
         bodyData.response_format = { type: "json_object" };
       }
 

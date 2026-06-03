@@ -267,7 +267,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     claude: { url: 'https://api.anthropic.com', model: 'claude-3-5-sonnet' },
                     openrouter: { url: 'https://openrouter.ai/api/v1', model: 'google/gemini-2.5-flash' },
                     siliconflow: { url: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3' },
-                    custom: { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' }
+                    custom: { url: '', model: '' }
                   };
                   const fallbackConfig = defaultsMap[prov];
                   if (fallbackConfig) {
@@ -314,7 +314,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="text"
                 value={apiModel}
                 onChange={(e) => setApiModel(e.target.value)}
-                placeholder="gpt-4o-mini"
+                placeholder={isZh ? '自定义模型名称，如 gpt-4o、qwen-vl-plus' : 'e.g. gpt-4o, qwen-vl-plus'}
                 className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
               />
             </div>

@@ -234,7 +234,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       let targetUrl = cleanBaseUrl || defaultUrl;
       if (!targetUrl.startsWith("http")) targetUrl = "https://" + targetUrl;
-      targetUrl = targetUrl.replace(/\/+$/, "") + "/chat/completions";
+      targetUrl = targetUrl.replace(/\/+$/, "");
+      if (!targetUrl.includes("/chat/completions")) {
+        targetUrl = targetUrl + "/chat/completions";
+      }
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",

@@ -135,7 +135,10 @@ app.post("/api/ai/test-connection", async (req, res) => {
       if (!targetUrl.startsWith("http")) {
         targetUrl = "https://" + targetUrl;
       }
-      targetUrl = targetUrl.replace(/\/+$/, "") + "/chat/completions";
+      targetUrl = targetUrl.replace(/\/+$/, "");
+      if (!targetUrl.includes("/chat/completions")) {
+        targetUrl = targetUrl + "/chat/completions";
+      }
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -469,7 +472,10 @@ app.post("/api/gemini/analyze", async (req, res) => {
       if (!targetUrl.startsWith("http")) {
         targetUrl = "https://" + targetUrl;
       }
-      targetUrl = targetUrl.replace(/\/+$/, "") + "/chat/completions";
+      targetUrl = targetUrl.replace(/\/+$/, "");
+      if (!targetUrl.includes("/chat/completions")) {
+        targetUrl = targetUrl + "/chat/completions";
+      }
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",

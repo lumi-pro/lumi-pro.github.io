@@ -103,7 +103,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       let targetUrl = cleanBaseUrl || defaultUrl;
       if (!targetUrl.startsWith("http")) targetUrl = "https://" + targetUrl;
-      targetUrl = targetUrl.replace(/\/+$/, "") + "/chat/completions";
+      targetUrl = targetUrl.replace(/\/+$/, "");
+      if (!targetUrl.includes("/chat/completions")) {
+        targetUrl = targetUrl + "/chat/completions";
+      }
 
       const defaultModel = prov === "openai" ? "gpt-4o-mini" :
                            prov === "deepseek" ? "deepseek-chat" :

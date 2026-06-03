@@ -765,7 +765,8 @@ export default function App() {
   const handleAmbientDetected = (stats: typeof ambientStats) => {
     setAmbientStats(stats);
     
-    // If we have an active advanced Gemini AI vision report, we respect and freeze that
+    const hasApiKey = !!(localStorage.getItem('lumi_api_key'));
+    
     if (aiReport) {
       if (!lockedStats) {
         setLockedStats({
@@ -778,17 +779,14 @@ export default function App() {
         const score = calculateSceneChangeScore(stats, lockedStats);
         setSceneChangeScore(score);
         if (score > 70) {
-          setAiReport(null); // automatic fade-back to rule-based sensory tracking when scene changes significantly
+          setAiReport(null);
           setLockedStats(null);
         }
       }
       return;
     }
 
-    // 1. Initial sensory state or complete scene unlock
     if (!lockedStats) {
-      const recommendation = getRecommendation(stats.brightness, stats.warmth);
-      setLockedRecommendedInfo(recommendation);
       setLockedStats({
         ...stats,
         simulatedScenario,
@@ -796,11 +794,10 @@ export default function App() {
       });
       setSceneChangeScore(0);
 
-      // Verify custom personal Scene Memory cache
       const sKey = getSceneKey(stats);
       const saved = preferences.sceneMemory?.[sKey];
 
-      if (saved) {
+      if (saved && hasApiKey) {
         const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === saved.presetId);
         if (matchedPreset) {
           if (!manualLockMode && preferences.autoApply) {
@@ -816,8 +813,10 @@ export default function App() {
             : `✨ [Memory Restored] Sensed scene key! Loaded your custom "${presetName}" setup`;
           showToast(msg);
         }
-      } else {
-        // Cold start - autoapply the new recommendation if allowed & not manually overridden
+        setLockedRecommendedInfo({ presetId: saved.presetId } as any);
+      } else if (hasApiKey) {
+        const recommendation = getRecommendation(stats.brightness, stats.warmth);
+        setLockedRecommendedInfo(recommendation);
         const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendation.presetId);
         if (matchedPreset) {
           if (!manualLockMode && preferences.autoApply) {
@@ -849,8 +848,7 @@ export default function App() {
       const score = calculateSceneChangeScore(stats, lockedStats);
       setSceneChangeScore(score);
 
-      if (score > 70) {
-        // Scene changed significantly! Trigger recalculation and reset state tracking base
+      if (score > 70 && hasApiKey) {
         const recommendation = getRecommendation(stats.brightness, stats.warmth);
         setLockedRecommendedInfo(recommendation);
         setLockedStats({
@@ -860,7 +858,6 @@ export default function App() {
         });
         setSceneChangeScore(0);
 
-        // Verify custom Scene Memory
         const sKey = getSceneKey(stats);
         const saved = preferences.sceneMemory?.[sKey];
 
@@ -881,7 +878,6 @@ export default function App() {
             showToast(msg);
           }
         } else {
-          // Cold start - autoapply fresh recommender parameters
           const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendation.presetId);
           if (matchedPreset) {
             if (!manualLockMode && preferences.autoApply) {
@@ -1458,12 +1454,14 @@ export default function App() {
     detectedTime: isZh ? '精选氛围补光' : 'Curated Ambiance',
     detectedPlace: isZh ? '高级人像环境' : 'Premium Sphere',
     memoryEffect: ''
-  } : getRecommendation(ambientStats.brightness, ambientStats.warmth);
+  } : localStorage.getItem('lumi_api_key') ? getRecommendation(ambientStats.brightness, ambientStats.warmth) : { presetId: 'cream' };
 
   const recommendedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendedInfo.presetId) || FILL_LIGHT_PRESETS[0];
 
   // ⚡ Lumi AI Auto-Tune / 自动追光 effect
   useEffect(() => {
+    const hasApiKey = !!(localStorage.getItem('lumi_api_key'));
+    if (!hasApiKey) return;
     if (preferences.autoApply && !manualLockMode) {
       if (aiReport) {
         const pres = FILL_LIGHT_PRESETS.find(p => p.id === aiReport.recommendedPresetId) || recommendedPreset;
@@ -1547,8 +1545,9 @@ export default function App() {
     playSound('click');
     setActivePreset(preset);
     setIsLightSelected(true);
-    setManualLockMode(true); // Enter manual lock mode on choice
+    setManualLockMode(true);
     handleRecordPresetUsage(preset.id);
+    updateSceneMemory(preset.id, brightness, softness, intensityLevel);
     setIsAiPanelExpanded(false);
     setImmersiveMode(true); // Auto-trigger immersive selfie mode on selection
     analyticsTracker.track('preset_change', {
@@ -1930,6 +1929,11 @@ export default function App() {
       setSoftness(report.targetSoftness);
       if (report.recommendedIntensity) {
         setIntensityLevel(report.recommendedIntensity as any);
+      }
+
+      if (pres) {
+        updateSceneMemory(pres.id, report.targetBrightness, report.targetSoftness, (report.recommendedIntensity as any) || 'normal');
+        handleRecordPresetUsage(pres.id);
       }
 
       playSound('focus');

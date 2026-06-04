@@ -262,7 +262,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   const defaultsMap: Record<string, { url: string; model: string }> = {
                     gemini: { url: 'https://generativelanguage.googleapis.com', model: 'gemini-2.5-flash' },
                     openai: { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
-                    doubao: { url: 'https://ark.cn-beijing.volces.com/api/v3', model: 'ep-xxxxxxxxxxxx' },
+                    doubao: { url: 'https://ark.cn-beijing.volces.com/api/v3', model: '' },
                     deepseek: { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
                     claude: { url: 'https://api.anthropic.com', model: 'claude-3-5-sonnet' },
                     openrouter: { url: 'https://openrouter.ai/api/v1', model: 'google/gemini-2.5-flash' },
@@ -274,7 +274,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     setApiEndpoint(fallbackConfig.url);
                     setApiModel(fallbackConfig.model);
                   }
-                  // Reset test connection status on provider changes
+                  localStorage.setItem('lumi_api_provider', prov);
+                  localStorage.setItem('lumi_api_endpoint', fallbackConfig?.url || '');
+                  localStorage.setItem('lumi_api_model', fallbackConfig?.model || '');
                   setTestStatus('idle');
                   setTestFeedback('');
                 }}
@@ -299,7 +301,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <input
                 type="text"
                 value={apiEndpoint}
-                onChange={(e) => setApiEndpoint(e.target.value)}
+                onChange={(e) => { setApiEndpoint(e.target.value); localStorage.setItem('lumi_api_endpoint', e.target.value); }}
                 placeholder="https://api.openai.com/v1"
                 className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
               />
@@ -313,8 +315,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <input
                 type="text"
                 value={apiModel}
-                onChange={(e) => setApiModel(e.target.value)}
-                placeholder={isZh ? '自定义模型名称，如 gpt-4o、qwen-vl-plus' : 'e.g. gpt-4o, qwen-vl-plus'}
+                onChange={(e) => { setApiModel(e.target.value); localStorage.setItem('lumi_api_model', e.target.value); }}
+                placeholder={
+                  apiProvider === 'doubao' ? (isZh ? '请填写火山方舟部署ID，如 ep-20250101xxxx' : 'Your Volcengine endpoint ID, e.g. ep-20250101xxxx')
+                  : isZh ? '自定义模型名称，如 gpt-4o、qwen-vl-plus' : 'e.g. gpt-4o, qwen-vl-plus'
+                }
                 className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
               />
             </div>
@@ -328,7 +333,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <input
                   type={showKey ? 'text' : 'password'}
                   value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
+                  onChange={(e) => { setApiKey(e.target.value); localStorage.setItem('lumi_api_key', e.target.value); }}
                   placeholder={isZh ? '请输入您的 API Key' : 'Enter your API Key'}
                   className="w-full h-9 rounded-xl border border-pink-100 pl-3 pr-10 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
                 />

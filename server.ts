@@ -42,7 +42,25 @@ app.post("/api/ai/test-connection", async (req, res) => {
 
     const cleanBaseUrl = (baseUrl || "").trim();
     const cleanModel = (model || "").trim();
-    const prov = (provider || "gemini").toLowerCase();
+    const provRaw = (provider || "gemini").toLowerCase();
+
+    const providerDefaultUrls: Record<string, string[]> = {
+      gemini: ["googleapis.com", "generativelanguage"],
+      claude: ["anthropic.com"],
+      openai: ["api.openai.com"],
+      doubao: ["ark.cn-beijing.volces.com", "volces.com"],
+      deepseek: ["api.deepseek.com"],
+      openrouter: ["openrouter.ai"],
+      siliconflow: ["api.siliconflow.cn", "siliconflow.cn"],
+    };
+
+    let prov = provRaw;
+    if (cleanBaseUrl && providerDefaultUrls[provRaw]) {
+      const isMatch = providerDefaultUrls[provRaw].some(d => cleanBaseUrl.includes(d));
+      if (!isMatch) {
+        prov = "custom";
+      }
+    }
 
     let testSuccess = false;
     let errorMessage = "";
@@ -347,9 +365,28 @@ app.post("/api/gemini/analyze", async (req, res) => {
       CRITICAL SYSTEM DIRECTIVE: Output a valid stringified JSON object strictly containing the keys: ${schemaKeys.join(", ")}. Ensure there are no surrounding markdown code tags in your raw REST output unless instructed, and keep JSON parseable.
     `;
 
-    const prov = (provider || "gemini").toLowerCase();
+    const provRaw = (provider || "gemini").toLowerCase();
     const cleanBaseUrl = (apiEndpoint || "").trim();
     const cleanModel = (model || "").trim();
+
+    const providerDefaultUrls: Record<string, string[]> = {
+      gemini: ["googleapis.com", "generativelanguage"],
+      claude: ["anthropic.com"],
+      openai: ["api.openai.com"],
+      doubao: ["ark.cn-beijing.volces.com", "volces.com"],
+      deepseek: ["api.deepseek.com"],
+      openrouter: ["openrouter.ai"],
+      siliconflow: ["api.siliconflow.cn", "siliconflow.cn"],
+    };
+
+    let prov = provRaw;
+    if (cleanBaseUrl && providerDefaultUrls[provRaw]) {
+      const isMatch = providerDefaultUrls[provRaw].some(d => cleanBaseUrl.includes(d));
+      if (!isMatch) {
+        prov = "custom";
+      }
+    }
+
     const isVision = supportsVision(prov, cleanModel);
 
     let resultText = "";

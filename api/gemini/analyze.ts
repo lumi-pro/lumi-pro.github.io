@@ -112,9 +112,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       CRITICAL: Output a valid JSON object with keys: ${schemaKeys.join(", ")}.
     `;
 
-    const prov = (provider || "gemini").toLowerCase();
+    const provRaw = (provider || "gemini").toLowerCase();
     const cleanBaseUrl = (apiEndpoint || "").trim();
     const cleanModel = (model || "").trim();
+
+    const providerDefaultUrls: Record<string, string[]> = {
+      gemini: ["googleapis.com", "generativelanguage"],
+      claude: ["anthropic.com"],
+      openai: ["api.openai.com"],
+      doubao: ["ark.cn-beijing.volces.com", "volces.com"],
+      deepseek: ["api.deepseek.com"],
+      openrouter: ["openrouter.ai"],
+      siliconflow: ["api.siliconflow.cn", "siliconflow.cn"],
+    };
+
+    let prov = provRaw;
+    if (cleanBaseUrl && providerDefaultUrls[provRaw]) {
+      const isMatch = providerDefaultUrls[provRaw].some(d => cleanBaseUrl.includes(d));
+      if (!isMatch) {
+        prov = "custom";
+      }
+    }
+
     const isVision = supportsVision(prov, cleanModel);
 
     let resultText = "";

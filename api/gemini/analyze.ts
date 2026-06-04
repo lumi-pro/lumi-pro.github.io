@@ -86,8 +86,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).json(localFallbackReport);
   }
 
-  const activeModel = model || "";
-  if ((provider === "doubao" || (apiEndpoint || "").toLowerCase().includes("volces.com") || (apiEndpoint || "").toLowerCase().includes("volcengine")) && isPlaceholderValue(activeModel)) {
+  const cleanModel = (model || "").trim();
+  const provRaw = (provider || "gemini").toLowerCase();
+  const isDoubao = provRaw === "doubao" || (apiEndpoint || "").toLowerCase().includes("volces.com") || (apiEndpoint || "").toLowerCase().includes("volcengine");
+  const modelToVerify = cleanModel || (isDoubao ? "ep-xxxxxxxxxxxx" : "");
+
+  if (isPlaceholderValue(modelToVerify) && modelToVerify !== "") {
     const doubaoFallback = {
       ...localFallbackReport,
       problems: "💡 提示：您已选择火山引擎「豆包」模型，但尚未配置有效的目标接入点 Endpoint ID (例如 ep-2026xxxxxxxx-xxxxx)。目前使用设备本地多维传感器自控补光。",

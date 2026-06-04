@@ -36,12 +36,34 @@ app.post("/api/ai/test-connection", async (req, res) => {
   try {
     const { provider, apiKey, baseUrl, model } = req.body;
     if (!apiKey) {
-      return res.status(400).json({ success: false, message: "API Key is required to test connection." });
+      return res.status(200).json({ success: false, message: "API Key is required to test connection." });
+    }
+
+    const isPlaceholderValue = (val: any) => {
+      if (!val || typeof val !== 'string') return true;
+      const v = val.trim().toLowerCase();
+      return (
+        v === "" ||
+        v.includes("placeholder") ||
+        v.includes("your_api_key") ||
+        v.includes("your_key") ||
+        v === "sk-xxxx" ||
+        v === "ep-xxxxxxxxxxxx" ||
+        v.includes("xxxxxx")
+      );
+    };
+
+    if (isPlaceholderValue(apiKey)) {
+      return res.status(200).json({ success: false, message: "Please enter a valid API Key to test the connection (currently detecting a default placeholder)." });
     }
 
     const cleanBaseUrl = (baseUrl || "").trim();
     const cleanModel = (model || "").trim();
     const provRaw = (provider || "gemini").toLowerCase();
+
+    if ((provRaw === "doubao" || cleanBaseUrl.toLowerCase().includes("volces.com") || cleanBaseUrl.toLowerCase().includes("volcengine")) && (isPlaceholderValue(cleanModel) || cleanModel === "ep-xxxxxxxxxxxx" || cleanModel === "")) {
+      return res.status(200).json({ success: false, message: "Volcengine 'Doubao' model requires a valid Endpoint ID (e.g. ep-2026xxxx-xxxxx). Currently detecting the default placeholder 'ep-xxxxxxxxxxxx', please configure the settings." });
+    }
 
     let prov = provRaw;
     if (cleanBaseUrl) {
@@ -293,8 +315,12 @@ app.post("/api/gemini/analyze", async (req, res) => {
     return res.json(localFallbackReport);
   }
 
-  const activeModel = model || "";
-  if ((provider === "doubao" || (apiEndpoint || "").toLowerCase().includes("volces.com") || (apiEndpoint || "").toLowerCase().includes("volcengine")) && isPlaceholderValue(activeModel)) {
+  const cleanModel = (model || "").trim();
+  const provRaw = (provider || "gemini").toLowerCase();
+  const isDoubao = provRaw === "doubao" || (apiEndpoint || "").toLowerCase().includes("volces.com") || (apiEndpoint || "").toLowerCase().includes("volcengine");
+  const modelToVerify = cleanModel || (isDoubao ? "ep-xxxxxxxxxxxx" : "");
+
+  if (isPlaceholderValue(modelToVerify) && modelToVerify !== "") {
     const doubaoFallback = {
       ...localFallbackReport,
       problems: "💡 提示：您已选择火山引擎「豆包」模型，但尚未配置有效的目标接入点 Endpoint ID (例如 ep-2026xxxxxxxx-xxxxx)。目前使用设备本地多维传感器自控补光。",

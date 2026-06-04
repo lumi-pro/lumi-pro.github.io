@@ -1943,6 +1943,7 @@ export default function App() {
 
       // Save report content
       setAiReport(report);
+      setShowDetailedAnalysis(true);
       setManualLockMode(false); // Reset manual lock when they explicitly trigger AI analysis
       setLockedStats(null); // Reset locked base to baseline from newly scanned frame
       

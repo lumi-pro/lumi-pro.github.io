@@ -54,6 +54,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     return localStorage.getItem('lumi_api_last_saved') || null;
   });
   const [showKey, setShowKey] = useState<boolean>(false);
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
 
   // Connection testing states
@@ -262,7 +263,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   const defaultsMap: Record<string, { url: string; model: string }> = {
                     gemini: { url: 'https://generativelanguage.googleapis.com', model: 'gemini-2.5-flash' },
                     openai: { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
-                    doubao: { url: 'https://ark.cn-beijing.volces.com/api/v3', model: '' },
+                    doubao: { url: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-1.5-pro-32k' },
                     deepseek: { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
                     claude: { url: 'https://api.anthropic.com', model: 'claude-3-5-sonnet' },
                     openrouter: { url: 'https://openrouter.ai/api/v1', model: 'google/gemini-2.5-flash' },
@@ -307,21 +308,33 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
 
-            {/* Model Name Input */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-[#cca0ab]">
-                {isZh ? '模型名称 (Model Name)' : 'Model'}
-              </label>
-              <input
-                type="text"
-                value={apiModel}
-                onChange={(e) => { setApiModel(e.target.value); localStorage.setItem('lumi_api_model', e.target.value); }}
-                placeholder={
-                  apiProvider === 'doubao' ? (isZh ? '请填写火山方舟部署ID，如 ep-20250101xxxx' : 'Your Volcengine endpoint ID, e.g. ep-20250101xxxx')
-                  : isZh ? '自定义模型名称，如 gpt-4o、qwen-vl-plus' : 'e.g. gpt-4o, qwen-vl-plus'
-                }
-                className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
-              />
+            {/* Advanced: Model Override */}
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center justify-between text-[11px] font-medium text-[#cca0ab] hover:text-[#ff80a3] transition-colors"
+              >
+                <span>{isZh ? '高级选项 (模型自定义)' : 'Advanced (Model Override)'}</span>
+                <span className="text-[9px]">{showAdvanced ? '︿' : '∨'}</span>
+              </button>
+              {showAdvanced && (
+                <input
+                  type="text"
+                  value={apiModel}
+                  onChange={(e) => { setApiModel(e.target.value); localStorage.setItem('lumi_api_model', e.target.value); }}
+                  placeholder={
+                    apiProvider === 'doubao' ? (isZh ? '火山方舟部署ID，如 ep-20250101xxxx' : 'Endpoint ID, e.g. ep-20250101xxxx')
+                    : isZh ? '留空使用默认模型' : 'Leave empty for default model'
+                  }
+                  className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
+                />
+              )}
+              {!showAdvanced && apiModel && (
+                <span className="text-[9px] text-neutral-400">
+                  {isZh ? `当前模型：${apiModel}` : `Model: ${apiModel}`}
+                </span>
+              )}
             </div>
 
             {/* API Key Input */}

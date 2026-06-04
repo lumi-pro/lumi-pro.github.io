@@ -1703,7 +1703,17 @@ export default function App() {
 
     // API verification check
     const storedProvider = localStorage.getItem('lumi_api_provider') || 'gemini';
-    const storedModel = localStorage.getItem('lumi_api_model') || 'gemini-2.5-flash';
+    const defaultModels: Record<string, string> = {
+      gemini: 'gemini-2.5-flash',
+      openai: 'gpt-4o-mini',
+      doubao: 'doubao-1.5-pro-32k',
+      deepseek: 'deepseek-chat',
+      claude: 'claude-3-5-sonnet',
+      openrouter: 'google/gemini-2.5-flash',
+      siliconflow: 'deepseek-ai/DeepSeek-V3',
+      custom: ''
+    };
+    const storedModel = localStorage.getItem('lumi_api_model') || defaultModels[storedProvider] || 'gemini-2.5-flash';
     const storedEndpoint = localStorage.getItem('lumi_api_endpoint') || 'https://generativelanguage.googleapis.com';
     const storedKey = localStorage.getItem('lumi_api_key') || '';
 

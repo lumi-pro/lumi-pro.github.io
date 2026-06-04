@@ -154,7 +154,7 @@ app.post("/api/ai/test-connection", async (req, res) => {
 
       const defaultModel = prov === "openai" ? "gpt-4o-mini" : 
                            prov === "deepseek" ? "deepseek-chat" : 
-                           prov === "doubao" ? "ep-xxxxxxxxxxxx" :
+                           prov === "doubao" ? "doubao-1.5-pro-32k" :
                            prov === "openrouter" ? "google/gemini-2.5-flash" :
                            prov === "siliconflow" ? "deepseek-ai/DeepSeek-V3" : "gpt-4o-mini";
 
@@ -499,7 +499,7 @@ app.post("/api/gemini/analyze", async (req, res) => {
 
       const defaultModel = prov === "openai" ? "gpt-4o-mini" : 
                            prov === "deepseek" ? "deepseek-chat" : 
-                           prov === "doubao" ? "ep-xxxxxxxxxxxx" :
+                           prov === "doubao" ? "doubao-1.5-pro-32k" :
                            prov === "openrouter" ? "google/gemini-2.5-flash" :
                            prov === "siliconflow" ? "deepseek-ai/DeepSeek-V3" : "gpt-4o-mini";
 

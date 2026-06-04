@@ -175,7 +175,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <input
                 type="text"
                 value={apiEndpoint}
-                onChange={(e) => setApiEndpoint(e.target.value)}
+                onChange={(e) => {
+                  const url = e.target.value;
+                  setApiEndpoint(url);
+                  
+                  // Dynamically auto-detect provider mapping based on the pasted URL to elevate UX
+                  const urlLower = url.toLowerCase().trim();
+                  let detectedProv: string | null = null;
+                  if (urlLower.includes("deepseek.com")) {
+                    detectedProv = "deepseek";
+                  } else if (urlLower.includes("siliconflow.cn")) {
+                    detectedProv = "siliconflow";
+                  } else if (urlLower.includes("volces.com") || urlLower.includes("volcengine")) {
+                    detectedProv = "doubao";
+                  } else if (urlLower.includes("openrouter.ai")) {
+                    detectedProv = "openrouter";
+                  } else if (urlLower.includes("api.openai.com")) {
+                    detectedProv = "openai";
+                  } else if (urlLower.includes("anthropic.com")) {
+                    detectedProv = "claude";
+                  } else if (urlLower.includes("googleapis.com") || urlLower.includes("generativelanguage")) {
+                    detectedProv = "gemini";
+                  } else if (urlLower.includes("rivtower.xyz") || urlLower.includes("watt-api")) {
+                    detectedProv = "custom";
+                  }
+                  
+                  // For custom endpoints or when detectedProv is populated
+                  const activeProv = detectedProv || apiProvider;
+                  const defaultsMap: Record<string, string> = {
+                    gemini: 'gemini-2.5-flash',
+                    openai: 'gpt-4o-mini',
+                    doubao: 'ep-xxxxxxxxxxxx',
+                    deepseek: 'deepseek-chat',
+                    claude: 'claude-3-5-sonnet',
+                    openrouter: 'google/gemini-2.5-flash',
+                    siliconflow: 'deepseek-ai/DeepSeek-V3',
+                    custom: (urlLower.includes("rivtower.xyz") || urlLower.includes("watt-api")) ? 'qwen3.6-27b' : 'gpt-4o-mini'
+                  };
+
+                  if (detectedProv && detectedProv !== apiProvider) {
+                    setApiProvider(detectedProv);
+                  }
+                  
+                  const targetDefaultModel = defaultsMap[activeProv];
+                  if (targetDefaultModel && (apiModel === 'gemini-2.5-flash' || apiModel === 'gpt-4o-mini' || apiModel === '')) {
+                    setApiModel(targetDefaultModel);
+                  }
+                }}
                 placeholder="https://api.openai.com/v1"
                 className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
               />

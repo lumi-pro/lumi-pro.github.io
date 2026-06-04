@@ -244,7 +244,7 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
     const analyzeCtx = analyzeCanvas.getContext('2d');
 
     const interval = setInterval(() => {
-      if (!active || !videoRef.current || useSimulatedPortrait) return;
+      if (!active || !videoRef.current || useSimulatedPortrait || isScanning) return;
       try {
         const video = videoRef.current;
         if (video.videoWidth === 0 || video.videoHeight === 0) return;

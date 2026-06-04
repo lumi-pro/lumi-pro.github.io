@@ -805,6 +805,7 @@ export default function App() {
   };
 
   const handleAmbientDetected = (stats: typeof ambientStats) => {
+    if (isAiScanning) return; // Prevent lighting/environment fluctuation during scanning
     setAmbientStats(stats);
     
     // If we have an active advanced Gemini AI vision report, we respect and freeze that
@@ -1591,17 +1592,11 @@ export default function App() {
     setIsLightSelected(true);
     setManualLockMode(true); // Enter manual lock mode on choice
     handleRecordPresetUsage(preset.id);
-    setIsAiPanelExpanded(false);
-    setImmersiveMode(true); // Auto-trigger immersive selfie mode on selection
     analyticsTracker.track('preset_change', {
       presetId: preset.id,
       presetName: preset.name,
       mode: 'single',
     });
-    showToast(isZh 
-      ? `💡 配色已手动锁定。AI 自动切换已暂停，您可在 AI 面板中重新开启追光。`
-      : `💡 Color selected and locked. Lumi AI auto-tuning paused. Resume anytime from the AI Panel.`
-    );
   };
 
   const handleSplitPresetSelect = (preset: FillLightPreset, side: 'left' | 'right') => {
@@ -1613,18 +1608,12 @@ export default function App() {
     }
     setIsLightSelected(true);
     setManualLockMode(true); // Enter manual lock mode on split choice
-    setIsAiPanelExpanded(false);
-    setImmersiveMode(true); // Auto-trigger immersive selfie mode on split choice
     analyticsTracker.track('split_preset_change', {
       side,
       presetId: preset.id,
       presetName: preset.name,
       pairedWith: side === 'left' ? splitPresetRight.id : splitPresetLeft.id,
     });
-    showToast(isZh
-      ? `💡 左右分屏已手动锁定。AI 自动切换已暂停，可在 AI 面板中重新开启追光。`
-      : `💡 Split-light locked. Lumi AI auto-tuning paused. Resume anytime from the AI Panel.`
-    );
   };
 
   const handleBrightnessChange = (val: number) => {
@@ -1804,7 +1793,7 @@ export default function App() {
         
         const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
         const endpointStr = storedEndpoint.trim();
-        const isGeminiUrl = endpointStr.includes("googleapis.com") || endpointStr.includes("google") || endpointStr.includes("gemini");
+        const isGeminiUrl = storedProvider === 'gemini' && (endpointStr.includes("googleapis.com") || endpointStr.includes("generativelanguage") || !endpointStr || endpointStr === 'https://generativelanguage.googleapis.com');
         
         let targetUrl = endpointStr;
         let headers: Record<string, string> = {
@@ -1843,10 +1832,11 @@ export default function App() {
         if (isGeminiUrl) {
           if (!targetUrl.includes(":generateContent")) {
             targetUrl = targetUrl.replace(/\/+$/, "");
+            const activeModel = storedModel || "gemini-2.5-flash";
             if (!targetUrl.includes("/v1beta") && !targetUrl.includes("/v1")) {
-              targetUrl = targetUrl + "/v1beta/models/gemini-1.5-flash:generateContent";
+              targetUrl = targetUrl + "/v1beta/models/" + activeModel + ":generateContent";
             } else {
-              targetUrl = targetUrl + "/models/gemini-1.5-flash:generateContent";
+              targetUrl = targetUrl + "/models/" + activeModel + ":generateContent";
             }
           }
           if (!targetUrl.includes("key=")) {
@@ -1895,6 +1885,23 @@ export default function App() {
           }
           
           let modelName = storedModel || 'gpt-4o-mini';
+          
+          if (modelName === "gemini-2.5-flash") {
+            const urlLower = targetUrl.toLowerCase();
+            if (urlLower.includes("rivtower.xyz") || urlLower.includes("watt-api")) {
+              modelName = "qwen3.6-27b";
+            } else if (urlLower.includes("deepseek.com")) {
+              modelName = "deepseek-chat";
+            } else if (urlLower.includes("siliconflow.cn")) {
+              modelName = "deepseek-ai/DeepSeek-V3";
+            } else if (urlLower.includes("volces.com") || urlLower.includes("volcengine")) {
+              modelName = "doubao-1.5-pro-32k";
+            } else if (urlLower.includes("api.openai.com")) {
+              modelName = "gpt-4o-mini";
+            } else {
+              modelName = "gpt-4o-mini";
+            }
+          }
           
           bodyData = {
             model: modelName,
@@ -2554,6 +2561,16 @@ export default function App() {
                       </span>
                     </div>
                   </div>
+                  
+                  <button
+                    onClick={() => {
+                      playSound('click');
+                      setIsAiPanelExpanded(false);
+                    }}
+                    className="text-[12.5px] text-zinc-300 hover:text-white font-extrabold transition-colors flex items-center gap-0.5 whitespace-nowrap cursor-pointer"
+                  >
+                    {isZh ? '【收起】' : '【Collapse】'}
+                  </button>
                 </div>
 
                 {/* Core Button: 一键优化自拍光线 */}
@@ -2775,11 +2792,10 @@ export default function App() {
                 playSound('click');
                 setImmersiveMode(false); // Unfurls console panel
               }}
-              className="w-12 h-12 rounded-full bg-black/25 hover:bg-black/35 text-white border border-white/10 flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-md backdrop-blur-md transition-all active:scale-95 animate-fade-in"
+              className="w-12 h-12 rounded-full bg-black/25 hover:bg-black/35 text-white border border-white/10 flex items-center justify-center cursor-pointer shadow-md backdrop-blur-md transition-all active:scale-95 animate-fade-in"
               title={isZh ? '打开调色控制台' : 'Open Tuning Console'}
             >
-              <Sliders className="w-4 h-4 text-pink-300" />
-              <span className="text-[7.5px] scale-90 text-white/75 font-sans font-medium">{isZh ? '调色' : 'Tune'}</span>
+              <Sliders className="w-5 h-5 text-pink-300" />
             </button>
           ) : (
             /* Immersive transition button to collapse manually */

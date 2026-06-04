@@ -116,21 +116,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cleanBaseUrl = (apiEndpoint || "").trim();
     const cleanModel = (model || "").trim();
 
-    const providerDefaultUrls: Record<string, string[]> = {
-      gemini: ["googleapis.com", "generativelanguage"],
-      claude: ["anthropic.com"],
-      openai: ["api.openai.com"],
-      doubao: ["ark.cn-beijing.volces.com", "volces.com"],
-      deepseek: ["api.deepseek.com"],
-      openrouter: ["openrouter.ai"],
-      siliconflow: ["api.siliconflow.cn", "siliconflow.cn"],
-    };
-
     let prov = provRaw;
-    if (cleanBaseUrl && providerDefaultUrls[provRaw]) {
-      const isMatch = providerDefaultUrls[provRaw].some(d => cleanBaseUrl.includes(d));
-      if (!isMatch) {
-        prov = "custom";
+    if (cleanBaseUrl) {
+      const urlLower = cleanBaseUrl.toLowerCase();
+      if (urlLower.includes("deepseek.com")) {
+        prov = "deepseek";
+      } else if (urlLower.includes("siliconflow.cn")) {
+        prov = "siliconflow";
+      } else if (urlLower.includes("volces.com") || urlLower.includes("volcengine")) {
+        prov = "doubao";
+      } else if (urlLower.includes("openrouter.ai")) {
+        prov = "openrouter";
+      } else if (urlLower.includes("api.openai.com")) {
+        prov = "openai";
+      } else if (urlLower.includes("anthropic.com")) {
+        prov = "claude";
+      } else if (provRaw === "gemini") {
+        const isGeminiNative = urlLower.includes("googleapis.com") || urlLower.includes("generativelanguage") || urlLower.includes("google");
+        if (!isGeminiNative) {
+          prov = "custom";
+        }
       }
     }
 
@@ -259,9 +264,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         "Authorization": `Bearer ${activeKey}`
       };
 
-      const defaultModel = prov === "openai" ? "gpt-4o-mini" :
+      const isWattApi = cleanBaseUrl.toLowerCase().includes("rivtower.xyz") || cleanBaseUrl.toLowerCase().includes("watt-api");
+      const defaultModel = isWattApi ? "qwen3.6-27b" :
+                           prov === "openai" ? "gpt-4o-mini" :
                            prov === "deepseek" ? "deepseek-chat" :
-                            prov === "doubao" ? "doubao-1.5-pro-32k" :
+                           prov === "doubao" ? "doubao-1.5-pro-32k" :
                            prov === "openrouter" ? "google/gemini-2.5-flash" :
                            prov === "siliconflow" ? "deepseek-ai/DeepSeek-V3" : "gpt-4o-mini";
 
@@ -273,8 +280,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         contentArray.push({ type: "text", text: promptText + "\n(NOTE: Analyze based purely on sensor values since this model does not support images.)" });
       }
 
+      let activeModel = cleanModel;
+      if (activeModel === "gemini-2.5-flash" && prov !== "gemini" && prov !== "openrouter") {
+        activeModel = ""; // Fallback to defaultModel for this specific provider
+      }
+
       const bodyData: any = {
-        model: cleanModel || defaultModel,
+        model: activeModel || defaultModel,
         messages: [{ role: "user", content: contentArray }]
       };
 

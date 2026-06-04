@@ -41,7 +41,30 @@ app.post("/api/ai/test-connection", async (req, res) => {
 
     const cleanBaseUrl = (baseUrl || "").trim();
     const cleanModel = (model || "").trim();
-    const prov = (provider || "gemini").toLowerCase();
+    const provRaw = (provider || "gemini").toLowerCase();
+
+    let prov = provRaw;
+    if (cleanBaseUrl) {
+      const urlLower = cleanBaseUrl.toLowerCase();
+      if (urlLower.includes("deepseek.com")) {
+        prov = "deepseek";
+      } else if (urlLower.includes("siliconflow.cn")) {
+        prov = "siliconflow";
+      } else if (urlLower.includes("volces.com") || urlLower.includes("volcengine")) {
+        prov = "doubao";
+      } else if (urlLower.includes("openrouter.ai")) {
+        prov = "openrouter";
+      } else if (urlLower.includes("api.openai.com")) {
+        prov = "openai";
+      } else if (urlLower.includes("anthropic.com")) {
+        prov = "claude";
+      } else if (provRaw === "gemini") {
+        const isGeminiNative = urlLower.includes("googleapis.com") || urlLower.includes("generativelanguage") || urlLower.includes("google");
+        if (!isGeminiNative) {
+          prov = "custom";
+        }
+      }
+    }
 
     let testSuccess = false;
     let errorMessage = "";
@@ -142,14 +165,21 @@ app.post("/api/ai/test-connection", async (req, res) => {
         "Authorization": `Bearer ${apiKey}`
       };
 
-      const defaultModel = prov === "openai" ? "gpt-4o-mini" : 
+      const isWattApi = cleanBaseUrl.toLowerCase().includes("rivtower.xyz") || cleanBaseUrl.toLowerCase().includes("watt-api");
+      const defaultModel = isWattApi ? "qwen3.6-27b" :
+                           prov === "openai" ? "gpt-4o-mini" : 
                            prov === "deepseek" ? "deepseek-chat" : 
                            prov === "doubao" ? "ep-xxxxxxxxxxxx" :
                            prov === "openrouter" ? "google/gemini-2.5-flash" :
                            prov === "siliconflow" ? "deepseek-ai/DeepSeek-V3" : "gpt-4o-mini";
 
+      let activeModel = cleanModel;
+      if (activeModel === "gemini-2.5-flash" && prov !== "gemini" && prov !== "openrouter") {
+        activeModel = ""; // Realignment override
+      }
+
       const testBody: any = {
-        model: cleanModel || defaultModel,
+        model: activeModel || defaultModel,
         messages: [{ role: "user", content: "Say OK in 1 word." }],
         max_tokens: 10
       };
@@ -335,10 +365,33 @@ app.post("/api/gemini/analyze", async (req, res) => {
       CRITICAL SYSTEM DIRECTIVE: Output a valid stringified JSON object strictly containing the keys: ${schemaKeys.join(", ")}. Ensure there are no surrounding markdown code tags in your raw REST output unless instructed, and keep JSON parseable.
     `;
 
-    const prov = (provider || "gemini").toLowerCase();
+    const provRaw = (provider || "gemini").toLowerCase();
     const cleanBaseUrl = (apiEndpoint || "").trim();
     const cleanModel = (model || "").trim();
-    const isVision = supportsVision(prov, cleanModel);
+
+    let prov = provRaw;
+    if (cleanBaseUrl) {
+      const urlLower = cleanBaseUrl.toLowerCase();
+      if (urlLower.includes("deepseek.com")) {
+        prov = "deepseek";
+      } else if (urlLower.includes("siliconflow.cn")) {
+        prov = "siliconflow";
+      } else if (urlLower.includes("volces.com") || urlLower.includes("volcengine")) {
+        prov = "doubao";
+      } else if (urlLower.includes("openrouter.ai")) {
+        prov = "openrouter";
+      } else if (urlLower.includes("api.openai.com")) {
+        prov = "openai";
+      } else if (urlLower.includes("anthropic.com")) {
+        prov = "claude";
+      } else if (provRaw === "gemini") {
+        const isGeminiNative = urlLower.includes("googleapis.com") || urlLower.includes("generativelanguage") || urlLower.includes("google");
+        if (!isGeminiNative) {
+          prov = "custom";
+        }
+      }
+    }
+    const isVision = true;
 
     let resultText = "";
 
@@ -476,7 +529,9 @@ app.post("/api/gemini/analyze", async (req, res) => {
         "Authorization": `Bearer ${activeKey}`
       };
 
-      const defaultModel = prov === "openai" ? "gpt-4o-mini" : 
+      const isWattApi = cleanBaseUrl.toLowerCase().includes("rivtower.xyz") || cleanBaseUrl.toLowerCase().includes("watt-api");
+      const defaultModel = isWattApi ? "qwen3.6-27b" :
+                           prov === "openai" ? "gpt-4o-mini" : 
                            prov === "deepseek" ? "deepseek-chat" : 
                            prov === "doubao" ? "ep-xxxxxxxxxxxx" :
                            prov === "openrouter" ? "google/gemini-2.5-flash" :
@@ -502,8 +557,13 @@ app.post("/api/gemini/analyze", async (req, res) => {
         });
       }
 
+      let activeModel = cleanModel;
+      if (activeModel === "gemini-2.5-flash" && prov !== "gemini" && prov !== "openrouter") {
+        activeModel = ""; // Realignment override
+      }
+
       const bodyData: any = {
-        model: cleanModel || defaultModel,
+        model: activeModel || defaultModel,
         messages: [{ role: "user", content: contentArray }]
       };
 

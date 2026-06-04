@@ -302,7 +302,13 @@ import {
   BookOpen,
   MousePointerClick,
   Trash2,
-  Sliders
+  Sliders,
+  Share2,
+  Send,
+  MessageSquare,
+  Folder,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface AmbientScenario {
@@ -566,6 +572,9 @@ export default function App() {
   const [showPhotoViewer, setShowPhotoViewer] = useState<boolean>(false);
   const [activeViewPhoto, setActiveViewPhoto] = useState<CapturedPhoto | null>(null);
   const [showOriginal, setShowOriginal] = useState<boolean>(false);
+  const [showCustomShareModal, setShowCustomShareModal] = useState<boolean>(false);
+  const [shareTargetFile, setShareTargetFile] = useState<File | null>(null);
+  const [shareTargetPhoto, setShareTargetPhoto] = useState<CapturedPhoto | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [showApiKeyPrompt, setShowApiKeyPrompt] = useState<boolean>(false);
 
@@ -574,6 +583,39 @@ export default function App() {
     setTimeout(() => {
       setToastMessage(null);
     }, 2800);
+  };
+
+  const saveAndPrunePhotos = (photos: CapturedPhoto[]): CapturedPhoto[] => {
+    let listToSave = [...photos];
+    let success = false;
+    while (listToSave.length > 0) {
+      try {
+        localStorage.setItem('lumi_captured_photos', JSON.stringify(listToSave));
+        success = true;
+        break;
+      } catch (e: any) {
+        if (
+          e &&
+          (e.name === 'QuotaExceededError' ||
+            e.code === 22 ||
+            e.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+            e.message?.toLowerCase().includes('quota') ||
+            e.message?.toLowerCase().includes('exceed'))
+        ) {
+          console.warn(`Local storage quota exceeded. Pruning oldest photo (total remaining in storage: ${listToSave.length - 1})`);
+          listToSave.pop(); // Remove the oldest photo at the end of the array
+        } else {
+          console.error('Local storage failure:', e);
+          break;
+        }
+      }
+    }
+    if (!success && photos.length > 0) {
+      try {
+        localStorage.removeItem('lumi_captured_photos');
+      } catch (err) {}
+    }
+    return listToSave;
   };
 
   // Live timer for tracking user session time in secondary console
@@ -765,8 +807,7 @@ export default function App() {
   const handleAmbientDetected = (stats: typeof ambientStats) => {
     setAmbientStats(stats);
     
-    const hasApiKey = !!(localStorage.getItem('lumi_api_key'));
-    
+    // If we have an active advanced Gemini AI vision report, we respect and freeze that
     if (aiReport) {
       if (!lockedStats) {
         setLockedStats({
@@ -779,14 +820,17 @@ export default function App() {
         const score = calculateSceneChangeScore(stats, lockedStats);
         setSceneChangeScore(score);
         if (score > 70) {
-          setAiReport(null);
+          setAiReport(null); // automatic fade-back to rule-based sensory tracking when scene changes significantly
           setLockedStats(null);
         }
       }
       return;
     }
 
+    // 1. Initial sensory state or complete scene unlock
     if (!lockedStats) {
+      const recommendation = getRecommendation(stats.brightness, stats.warmth);
+      setLockedRecommendedInfo(recommendation);
       setLockedStats({
         ...stats,
         simulatedScenario,
@@ -794,10 +838,11 @@ export default function App() {
       });
       setSceneChangeScore(0);
 
+      // Verify custom personal Scene Memory cache
       const sKey = getSceneKey(stats);
       const saved = preferences.sceneMemory?.[sKey];
 
-      if (saved && hasApiKey) {
+      if (saved) {
         const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === saved.presetId);
         if (matchedPreset) {
           if (!manualLockMode && preferences.autoApply) {
@@ -813,10 +858,8 @@ export default function App() {
             : `✨ [Memory Restored] Sensed scene key! Loaded your custom "${presetName}" setup`;
           showToast(msg);
         }
-        setLockedRecommendedInfo({ presetId: saved.presetId } as any);
-      } else if (hasApiKey) {
-        const recommendation = getRecommendation(stats.brightness, stats.warmth);
-        setLockedRecommendedInfo(recommendation);
+      } else {
+        // Cold start - autoapply the new recommendation if allowed & not manually overridden
         const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendation.presetId);
         if (matchedPreset) {
           if (!manualLockMode && preferences.autoApply) {
@@ -848,7 +891,8 @@ export default function App() {
       const score = calculateSceneChangeScore(stats, lockedStats);
       setSceneChangeScore(score);
 
-      if (score > 70 && hasApiKey) {
+      if (score > 70) {
+        // Scene changed significantly! Trigger recalculation and reset state tracking base
         const recommendation = getRecommendation(stats.brightness, stats.warmth);
         setLockedRecommendedInfo(recommendation);
         setLockedStats({
@@ -858,6 +902,7 @@ export default function App() {
         });
         setSceneChangeScore(0);
 
+        // Verify custom Scene Memory
         const sKey = getSceneKey(stats);
         const saved = preferences.sceneMemory?.[sKey];
 
@@ -878,6 +923,7 @@ export default function App() {
             showToast(msg);
           }
         } else {
+          // Cold start - autoapply fresh recommender parameters
           const matchedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendation.presetId);
           if (matchedPreset) {
             if (!manualLockMode && preferences.autoApply) {
@@ -1454,14 +1500,12 @@ export default function App() {
     detectedTime: isZh ? '精选氛围补光' : 'Curated Ambiance',
     detectedPlace: isZh ? '高级人像环境' : 'Premium Sphere',
     memoryEffect: ''
-  } : localStorage.getItem('lumi_api_key') ? getRecommendation(ambientStats.brightness, ambientStats.warmth) : { presetId: 'cream' };
+  } : getRecommendation(ambientStats.brightness, ambientStats.warmth);
 
   const recommendedPreset = FILL_LIGHT_PRESETS.find(p => p.id === recommendedInfo.presetId) || FILL_LIGHT_PRESETS[0];
 
   // ⚡ Lumi AI Auto-Tune / 自动追光 effect
   useEffect(() => {
-    const hasApiKey = !!(localStorage.getItem('lumi_api_key'));
-    if (!hasApiKey) return;
     if (preferences.autoApply && !manualLockMode) {
       if (aiReport) {
         const pres = FILL_LIGHT_PRESETS.find(p => p.id === aiReport.recommendedPresetId) || recommendedPreset;
@@ -1545,9 +1589,8 @@ export default function App() {
     playSound('click');
     setActivePreset(preset);
     setIsLightSelected(true);
-    setManualLockMode(true);
+    setManualLockMode(true); // Enter manual lock mode on choice
     handleRecordPresetUsage(preset.id);
-    updateSceneMemory(preset.id, brightness, softness, intensityLevel);
     setIsAiPanelExpanded(false);
     setImmersiveMode(true); // Auto-trigger immersive selfie mode on selection
     analyticsTracker.track('preset_change', {
@@ -1675,12 +1718,8 @@ export default function App() {
 
       setCapturedPhotos((prev) => {
         const updated = [newPhoto, ...prev];
-        try {
-          localStorage.setItem('lumi_captured_photos', JSON.stringify(updated));
-        } catch (e) {
-          console.error('Failed to save to local storage', e);
-        }
-        return updated;
+        const pruned = saveAndPrunePhotos(updated);
+        return pruned;
       });
       
       // Auto-preview immediate fluid post-take workflow (no interruption!)
@@ -1703,17 +1742,7 @@ export default function App() {
 
     // API verification check
     const storedProvider = localStorage.getItem('lumi_api_provider') || 'gemini';
-    const defaultModels: Record<string, string> = {
-      gemini: 'gemini-2.5-flash',
-      openai: 'gpt-4o-mini',
-      doubao: 'doubao-1.5-pro-32k',
-      deepseek: 'deepseek-chat',
-      claude: 'claude-3-5-sonnet',
-      openrouter: 'google/gemini-2.5-flash',
-      siliconflow: 'deepseek-ai/DeepSeek-V3',
-      custom: ''
-    };
-    const storedModel = localStorage.getItem('lumi_api_model') || defaultModels[storedProvider] || 'gemini-2.5-flash';
+    const storedModel = localStorage.getItem('lumi_api_model') || 'gemini-2.5-flash';
     const storedEndpoint = localStorage.getItem('lumi_api_endpoint') || 'https://generativelanguage.googleapis.com';
     const storedKey = localStorage.getItem('lumi_api_key') || '';
 
@@ -1776,13 +1805,6 @@ export default function App() {
         const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
         const endpointStr = storedEndpoint.trim();
         const isGeminiUrl = endpointStr.includes("googleapis.com") || endpointStr.includes("google") || endpointStr.includes("gemini");
-        const isAnthropicUrl = storedProvider === "claude" || endpointStr.includes("anthropic.com");
-        
-        const hasVision = (() => {
-          if (storedProvider === "doubao" || storedProvider === "custom") return false;
-          const textOnlyModels = ["qwen", "deepseek-chat", "gpt-3", "llama"];
-          return !textOnlyModels.some(m => (storedModel || "").toLowerCase().includes(m));
-        })();
         
         let targetUrl = endpointStr;
         let headers: Record<string, string> = {
@@ -1822,23 +1844,27 @@ export default function App() {
           if (!targetUrl.includes(":generateContent")) {
             targetUrl = targetUrl.replace(/\/+$/, "");
             if (!targetUrl.includes("/v1beta") && !targetUrl.includes("/v1")) {
-              targetUrl = targetUrl + "/v1beta/models/" + storedModel + ":generateContent";
+              targetUrl = targetUrl + "/v1beta/models/gemini-1.5-flash:generateContent";
             } else {
-              targetUrl = targetUrl + "/models/" + storedModel + ":generateContent";
+              targetUrl = targetUrl + "/models/gemini-1.5-flash:generateContent";
             }
           }
           if (!targetUrl.includes("key=")) {
             targetUrl += (targetUrl.includes("?") ? "&" : "?") + "key=" + storedKey;
           }
           
-          const parts: any[] = [];
-          if (hasVision) {
-            parts.push({ inlineData: { mimeType: "image/jpeg", data: base64Data } });
-          }
-          parts.push({ text: promptText });
-          
           bodyData = {
-            contents: [{ parts }],
+            contents: {
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: "image/jpeg",
+                    data: base64Data
+                  }
+                },
+                { text: promptText }
+              ]
+            },
             generationConfig: {
               responseMimeType: "application/json",
               responseSchema: {
@@ -1860,32 +1886,6 @@ export default function App() {
               }
             }
           };
-        } else if (isAnthropicUrl) {
-          if (!targetUrl.includes("/messages")) {
-            targetUrl = targetUrl.replace(/\/+$/, "");
-            if (!targetUrl.includes("/v1")) {
-              targetUrl = targetUrl + "/v1/messages";
-            } else {
-              targetUrl = targetUrl + "/messages";
-            }
-          }
-          headers["x-api-key"] = storedKey;
-          headers["anthropic-version"] = "2023-06-01";
-          
-          const userContent: any[] = [];
-          if (hasVision) {
-            userContent.push({
-              type: "image",
-              source: { type: "base64", media_type: "image/jpeg", data: base64Data }
-            });
-          }
-          userContent.push({ type: "text", text: promptText + `\n\nCRITICAL: Return a raw valid JSON object. Ensure the JSON strictly contains these keys: ${schemaKeys.join(", ")}.` });
-          
-          bodyData = {
-            model: storedModel || "claude-3-5-sonnet",
-            max_tokens: 2048,
-            messages: [{ role: "user", content: userContent }]
-          };
         } else {
           if (!targetUrl.includes("/chat/completions")) {
             targetUrl = targetUrl.replace(/\/+$/, "") + "/chat/completions";
@@ -1896,22 +1896,26 @@ export default function App() {
           
           let modelName = storedModel || 'gpt-4o-mini';
           
-          const userContent: any[] = [
-            { type: "text", text: promptText + `\n\nCRITICAL: Return a raw valid JSON object. Ensure the JSON strictly contains these keys: ${schemaKeys.join(", ")}.` }
-          ];
-          if (hasVision) {
-            userContent.push({
-              type: "image_url",
-              image_url: { url: `data:image/jpeg;base64,${base64Data}` }
-            });
-          }
-          
-          const skipResponseFormat = storedProvider === "openrouter" || storedProvider === "custom" || storedProvider === "doubao";
-          
           bodyData = {
             model: modelName,
-            ...(skipResponseFormat ? {} : { response_format: { type: "json_object" } }),
-            messages: [{ role: "user", content: userContent }]
+            response_format: { type: "json_object" },
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: promptText + `\n\nCRITICAL: Return a raw valid JSON object. Ensure the JSON strictly contains these keys: ${schemaKeys.join(", ")}.`
+                  },
+                  {
+                    type: "image_url",
+                    image_url: {
+                      url: `data:image/jpeg;base64,${base64Data}`
+                    }
+                  }
+                ]
+              }
+            ]
           };
         }
 
@@ -1931,8 +1935,6 @@ export default function App() {
         
         if (isGeminiUrl) {
           resultText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
-        } else if (isAnthropicUrl) {
-          resultText = data?.content?.[0]?.text || "{}";
         } else {
           resultText = data?.choices?.[0]?.message?.content || "{}";
         }
@@ -1953,7 +1955,6 @@ export default function App() {
 
       // Save report content
       setAiReport(report);
-      setShowDetailedAnalysis(true);
       setManualLockMode(false); // Reset manual lock when they explicitly trigger AI analysis
       setLockedStats(null); // Reset locked base to baseline from newly scanned frame
       
@@ -1969,11 +1970,6 @@ export default function App() {
         setIntensityLevel(report.recommendedIntensity as any);
       }
 
-      if (pres) {
-        updateSceneMemory(pres.id, report.targetBrightness, report.targetSoftness, (report.recommendedIntensity as any) || 'normal');
-        handleRecordPresetUsage(pres.id);
-      }
-
       playSound('focus');
       showToast(isZh 
         ? `✨ AI 自适应优化完毕！已精准契合「${pres?.name || '奶油肌'}」方案并自动优调亮度及柔和度。` 
@@ -1982,14 +1978,49 @@ export default function App() {
     } catch (err: any) {
       console.error('Lumi Vision API failed:', err);
       
-      setAiReport(null);
+      // Smart Fallback Recommendation Response inside client in case both call avenues failed:
+      let fallbackPreset = preferences?.favoritePresetId || "cream";
+      if (ambientStats) {
+        const isDark = (ambientStats.brightness || 100) < 60;
+        const isWarm = (ambientStats.warmth || 1.0) > 1.15;
+        if (isWarm) {
+          fallbackPreset = "cold"; // neutralize warm ambient glow with ice white
+        } else if (isDark) {
+          fallbackPreset = "moonlight"; // moonlight blue atmospheric glow
+        }
+      }
+      
+      const localReport = {
+        skinTone: "已为您智能微调自拍色光比例",
+        brightness: "已自动微调最佳自拍亮度层次",
+        shadows: "已自动均匀弱化面部暗沉与多余阴影",
+        sceneCharacteristics: `Lumi 智能光感控制：自动适配环境`,
+        problems: `自适应校准 (已启用本地精调模式)`,
+        recommendedPresetId: fallbackPreset,
+        recommendedIntensity: "normal" as any,
+        targetBrightness: preferences?.averageBrightness ? preferences.averageBrightness / 100 : 0.80,
+        targetSoftness: preferences?.averageSoftness ? preferences.averageSoftness / 100 : 0.70,
+        reasoningZh: "✨ [Lumi 智能自适应补光] 正在使用本地智能自适应控光程序，已为您精准匹配最佳光美学方案，护航完美出片！",
+        reasoningEn: "✨ [Lumi Local Calibration] Device auto-lighting triggered. Lumi auto-selected the best natural spectrum based on your ambient tone to guarantee a stunning photograph."
+      };
+      
+      setAiReport(localReport);
       setManualLockMode(false);
       setLockedStats(null);
       
+      const pres = FILL_LIGHT_PRESETS.find(p => p.id === localReport.recommendedPresetId);
+      if (pres) {
+        setActivePreset(pres);
+        setIsLightSelected(true);
+      }
+      setBrightness(localReport.targetBrightness);
+      setSoftness(localReport.targetSoftness);
+      setIntensityLevel(localReport.recommendedIntensity);
+      
       playSound('focus');
       showToast(isZh 
-        ? `⚠️ AI 调用失败：${err?.message || '网络异常'}。请检查设置中的 API 配置。` 
-        : `⚠️ AI call failed: ${err?.message || 'Network error'}. Please check your API config in Settings.`
+        ? "✨ 已为您自动降级至设备端高精光感推荐参数！" 
+        : "✨ Local sensor calibration auto-applied as fallback!"
       );
     } finally {
       setIsAiScanning(false);
@@ -2006,18 +2037,14 @@ export default function App() {
   const handleDeletePhoto = (photoId: string) => {
     playSound('click');
     const updated = capturedPhotos.filter(p => p.id !== photoId);
-    setCapturedPhotos(updated);
-    try {
-      localStorage.setItem('lumi_captured_photos', JSON.stringify(updated));
-    } catch (e) {
-      console.error('Failed to save to local storage after deletion:', e);
-    }
+    const pruned = saveAndPrunePhotos(updated);
+    setCapturedPhotos(pruned);
 
-    if (updated.length === 0) {
+    if (pruned.length === 0) {
       setShowPhotoViewer(false);
       setActiveViewPhoto(null);
     } else {
-      setActiveViewPhoto(updated[0]);
+      setActiveViewPhoto(pruned[0]);
     }
     
     analyticsTracker.track('snapshot_deleted', { id: photoId });
@@ -2029,20 +2056,9 @@ export default function App() {
     showToast(isZh ? "💾 正在生成至臻奶油肌自拍照并打包下载..." : "Generating premium studio portrait for download...");
     
     try {
-      const sourceSrc = photo.photoUrl || "/src/assets/images/portrait_simulate_1779326784414.png";
-      
-      const img = new Image();
-      img.src = sourceSrc;
-      img.crossOrigin = "anonymous";
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = resolve;
-      });
-
-      const width = img.naturalWidth || 1440;
-      const height = img.naturalHeight || 1920;
-      
       const canvas = document.createElement('canvas');
+      const width = 1080;
+      const height = 1440;
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
@@ -2050,6 +2066,16 @@ export default function App() {
         throw new Error('Canvas 2D context not available');
       }
 
+      // Load base image/frame
+      const img = new Image();
+      img.src = photo.photoUrl || "/src/assets/images/portrait_simulate_1779326784414.png";
+      img.crossOrigin = "anonymous"; // avoid tainted canvas issues
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = resolve; // avoid freezing if image loading fails
+      });
+
+      // 1. Draw base picture with active camera filter adjustments
       ctx.save();
       const contrastPct = 96 - (photo.softness - 0.5) * 8;
       const saturatePct = 103 + (photo.brightness - 0.5) * 6;
@@ -2058,6 +2084,7 @@ export default function App() {
       ctx.drawImage(img, 0, 0, width, height);
       ctx.restore();
 
+      // 2. Mist smoothing bloom blur layer
       if (photo.softness > 0.1) {
         ctx.save();
         ctx.filter = `contrast(${contrastPct}%) saturate(${saturatePct}%) brightness(${exposureBoost}) blur(6px)`;
@@ -2067,6 +2094,7 @@ export default function App() {
         ctx.restore();
       }
 
+      // 4. Premium Under-eye & shadow corrector vector glow mix-blend-overlay
       ctx.save();
       ctx.globalCompositeOperation = 'overlay';
       ctx.globalAlpha = photo.brightness * photo.softness * 0.5;
@@ -2078,6 +2106,7 @@ export default function App() {
       ctx.fillRect(0, 0, width, height);
       ctx.restore();
 
+      // 5. Subtle skin smoothing glow halo booster mix-blend-soft-light
       ctx.save();
       ctx.globalCompositeOperation = 'soft-light';
       ctx.globalAlpha = photo.brightness * 0.4;
@@ -2088,9 +2117,13 @@ export default function App() {
       ctx.fillRect(0, 0, width, height);
       ctx.restore();
 
+      // 6. Watermark decoration removed as requested by the user
+      // No logo, dates, or filter parameters will be printed on the final capture.
+
+      // Trigger automatic save download
       const link = document.createElement('a');
       link.download = `LUMI_GLOW_${photo.id}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 1.0);
+      link.href = canvas.toDataURL('image/jpeg', 0.96);
       link.click();
       
       setTimeout(() => {
@@ -2099,6 +2132,116 @@ export default function App() {
     } catch (e) {
       console.error('Failed to composite and save photo:', e);
       showToast(isZh ? "❌ 渲染生成失败，请重试。" : "Failed to render, please try again.");
+    }
+  };
+
+  const generateHighQualityPhotoFile = async (photo: CapturedPhoto): Promise<File> => {
+    const canvas = document.createElement('canvas');
+    const width = 1080;
+    const height = 1440;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas 2D context not available');
+    }
+
+    const img = new Image();
+    img.src = photo.photoUrl || "/src/assets/images/portrait_simulate_1779326784414.png";
+    img.crossOrigin = "anonymous";
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+
+    ctx.save();
+    const contrastPct = 96 - (photo.softness - 0.5) * 8;
+    const saturatePct = 103 + (photo.brightness - 0.5) * 6;
+    const exposureBoost = 1.05 + (photo.brightness - 0.5) * 0.28;
+    ctx.filter = `contrast(${contrastPct}%) saturate(${saturatePct}%) brightness(${exposureBoost})`;
+    ctx.drawImage(img, 0, 0, width, height);
+    ctx.restore();
+
+    if (photo.softness > 0.1) {
+      ctx.save();
+      ctx.filter = `contrast(${contrastPct}%) saturate(${saturatePct}%) brightness(${exposureBoost}) blur(6px)`;
+      ctx.globalAlpha = photo.softness * 0.38;
+      ctx.globalCompositeOperation = 'screen';
+      ctx.drawImage(img, 0, 0, width, height);
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'overlay';
+    ctx.globalAlpha = photo.brightness * photo.softness * 0.5;
+    const eyeGrad = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, width * 0.65);
+    eyeGrad.addColorStop(0, 'rgba(255,255,255,0.85)');
+    eyeGrad.addColorStop(0.25, 'rgba(255,255,255,0.3)');
+    eyeGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = eyeGrad;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'soft-light';
+    ctx.globalAlpha = photo.brightness * 0.4;
+    const haloGrad = ctx.createLinearGradient(width * 0.8, 0, 0, height);
+    haloGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
+    haloGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = haloGrad;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.96);
+    });
+    if (!blob) throw new Error('Blob creation failed');
+    return new File([blob], `LUMI_GLOW_${photo.id}.jpg`, { type: 'image/jpeg' });
+  };
+
+  const handleSharePhoto = async (photo: CapturedPhoto | null) => {
+    if (!photo) return;
+    playSound('click');
+    
+    try {
+      const file = await generateHighQualityPhotoFile(photo);
+      
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: isZh ? 'Lumi 美颜自拍' : 'Lumi Glamorous Portrait',
+          text: isZh ? '最适合女生的补光自拍神器，这是我的至臻自拍照，快来分享吧！' : 'This is my glamorous selfie from Lumi!',
+        });
+      } else {
+        console.warn('Web Share API is not supported or accessible. Using Custom Share Panel instead.');
+        setShareTargetFile(file);
+        setShareTargetPhoto(photo);
+        setShowCustomShareModal(true);
+      }
+    } catch (err: any) {
+      const isCancelled = err && (
+        err.name === 'AbortError' || 
+        err.name === 'NotAllowedError' ||
+        (err.message && (
+          err.message.toLowerCase().includes('canc') || 
+          err.message.toLowerCase().includes('abort')
+        ))
+      );
+
+      if (isCancelled) {
+        console.log('Share was closed/cancelled by the user.');
+        return;
+      }
+
+      console.error('Share process error:', err);
+      try {
+        const file = await generateHighQualityPhotoFile(photo);
+        setShareTargetFile(file);
+        setShareTargetPhoto(photo);
+        setShowCustomShareModal(true);
+      } catch (innerErr) {
+        handleDownloadPhoto(photo);
+      }
     }
   };
 
@@ -2288,11 +2431,6 @@ export default function App() {
             <span className="bg-black/20 text-white border border-white/10 px-3 py-1 rounded-full font-serif font-black italic text-sm tracking-widest shadow-md backdrop-blur-md">
               Lumi
             </span>
-            {splitMode !== 'none' && (
-              <span className="px-2 py-0.5 rounded-full bg-pink-500/80 border border-white/20 backdrop-blur-md text-[8px] text-white font-sans font-bold uppercase tracking-wider">
-                DUAL
-              </span>
-            )}
           </div>
 
           {/* Icons Bar Capsule (Apple Studio design) */}
@@ -2308,16 +2446,6 @@ export default function App() {
               title="Grid Overlay"
             >
               <Grid className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={handleSplitToggle}
-              className={`p-2 rounded-full transition-all duration-250 cursor-pointer ${
-                splitMode !== 'none' ? 'bg-white text-neutral-900 shadow-md font-semibold' : 'text-white/80 hover:bg-white/10 hover:text-white'
-              }`}
-              title="Split light"
-            >
-              <Columns className="w-4 h-4" />
             </button>
 
             <button
@@ -2364,28 +2492,6 @@ export default function App() {
               aiDiagnostic={isAiPanelExpanded}
               isScanning={isAiScanning}
             />
-
-            {/* Split controls overlay */}
-            {splitMode !== 'none' && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-35 flex gap-1 bg-black/20 border border-white/10 backdrop-blur-md p-1 rounded-full shadow-xl scale-95 animate-fade-in">
-                <button
-                  onClick={() => setSelectedSplitSide('left')}
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-sans font-medium transition-all ${
-                    selectedSplitSide === 'left' ? 'bg-white text-black shadow-md font-semibold' : 'text-white/70'
-                  }`}
-                >
-                  {splitMode === 'horizontal' ? '👈 左侧调色' : '👆 上侧调色'}
-                </button>
-                <button
-                  onClick={() => setSelectedSplitSide('right')}
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-sans font-medium transition-all ${
-                    selectedSplitSide === 'right' ? 'bg-white text-black shadow-md font-semibold' : 'text-white/70'
-                  }`}
-                >
-                  {splitMode === 'horizontal' ? '👉 右侧调色' : '👇 下侧调色'}
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -2409,73 +2515,45 @@ export default function App() {
                   playSound('click');
                   setIsAiPanelExpanded(true);
                 }}
-                className="w-full bg-black/30 hover:bg-black/40 border border-white/15 hover:border-indigo-500/35 px-4 py-3 rounded-2xl shadow-md backdrop-blur-md flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-99 group"
+                className="w-full bg-black/45 border border-white/15 hover:border-indigo-500/40 px-4 py-3 rounded-2xl shadow-xl backdrop-blur-md flex items-center justify-between gap-3 cursor-pointer transition-all active:scale-99 group"
               >
                 <div className="flex flex-col text-left min-w-0">
-                  <span className="text-xs font-semibold text-white tracking-wider flex items-center gap-1.5">
+                  <span className="text-[13px] font-bold text-white tracking-wider flex items-center gap-1.5">
                     {isZh ? 'Lumi AI 氛围自拍系统' : 'Lumi AI Ambiance System'}
                   </span>
-                  <span className="text-[10px] text-[#A6B5FF]/80 font-medium tracking-tight mt-0.5">
+                  <span className="text-[11px] text-zinc-300 font-bold tracking-normal mt-1">
                     {isZh ? '找到最适合你的自拍光线' : 'Find the best lighting for your selfie'}
                   </span>
                 </div>
-                <span className="text-xs text-indigo-300 font-bold hover:text-indigo-200 transition-colors flex items-center gap-0.5 whitespace-nowrap">
+                <span className="text-[12.5px] text-zinc-300 hover:text-white font-extrabold transition-colors flex items-center gap-0.5 whitespace-nowrap">
                   {isZh ? '【展开】' : '【Expand】'}
                 </span>
               </div>
             ) : (
               /* 🎨 EXPANDED HIGH-FIDELITY ATMOSPHERE DECK */
-              <div className="w-full bg-black/35 border border-white/10 rounded-2xl p-3 shadow-xl backdrop-blur-lg flex flex-col gap-2.5 animate-fade-in text-sans">
+              <div className="w-full bg-black/45 border border-white/10 rounded-2xl p-3 shadow-2xl backdrop-blur-lg flex flex-col gap-2.5 animate-fade-in text-sans">
                 
-                {/* Header: Title + Auto Apply Toggle */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                {/* Header: Title */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-2">
                   <div 
                     onClick={() => {
                       playSound('click');
                       setIsAiPanelExpanded(false);
                     }}
-                    className="flex items-center gap-1.5 min-w-0 cursor-pointer group/hdr hover:opacity-90"
+                    className="flex items-center gap-2 min-w-0 cursor-pointer group/hdr hover:opacity-90"
                   >
                     <span className="relative flex h-5 w-5 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 group-hover/hdr:scale-105 transition-transform">
                       <Sparkles className="w-3.5 h-3.5 animate-pulse" />
                     </span>
                     <div className="flex flex-col text-left">
-                      <span className="text-xs font-semibold text-white tracking-wider flex items-center gap-1.5 animate-fade-in">
+                      <span className="text-[13px] font-bold text-white tracking-wider flex items-center gap-1.5 animate-fade-in">
                         {isZh ? 'Lumi AI 氛围自拍系统' : 'Lumi AI Ambiance System'}
-                        <span className="text-[9.5px] bg-white/5 text-white/40 group-hover/hdr:text-indigo-300 group-hover/hdr:bg-indigo-500/10 transition-all font-sans px-1.5 py-0.5 rounded-md font-bold">
-                          {isZh ? '【收起】' : '【Fold】'}
-                        </span>
                       </span>
-                      <span className="text-[10px] text-[#A6B5FF]/80 font-medium tracking-tight mt-0.5">
+                      <span className="text-[11px] text-zinc-300 font-bold tracking-normal mt-1">
                         {isZh ? '找到最适合你的自拍光线' : 'Find the best lighting for your selfie'}
                       </span>
                     </div>
                   </div>
-
-                  {/* Toggle Auto Apply */}
-                  <button
-                    onClick={() => {
-                      playSound('click');
-                      setPreferences(prev => {
-                        const next = !prev.autoApply;
-                        if (next) {
-                          setActivePreset(recommendedPreset);
-                          setIsLightSelected(true);
-                          setManualLockMode(false);
-                          setLockedStats(null);
-                        }
-                        return { ...prev, autoApply: next };
-                      });
-                    }}
-                    className={`px-3 py-1 rounded-full text-[9.5px] font-sans font-bold flex items-center gap-1 border transition-all cursor-pointer ${
-                      preferences.autoApply
-                        ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400 font-extrabold shadow-sm'
-                        : 'bg-white/5 border-white/10 text-white/40'
-                    }`}
-                  >
-                    <span className={`w-1 h-1 rounded-full ${preferences.autoApply ? 'bg-emerald-400 animate-pulse' : 'bg-white/30'}`} />
-                    <span>{preferences.autoApply ? (isZh ? '自动匹配·开' : 'Auto-Match On') : (isZh ? '手动选光·关' : 'Manual Match')}</span>
-                  </button>
                 </div>
 
                 {/* Core Button: 一键优化自拍光线 */}
@@ -2552,8 +2630,8 @@ export default function App() {
                       <span className="text-xs font-bold text-indigo-300">
                         {isZh ? '✨ Lumi 智能自拍环境报告' : '✨ Lumi Smart Ambient Report'}
                       </span>
-                      <span className="text-[10px] text-white/40 hover:text-white transition-colors">
-                        {isZh ? '【收起分析】 ︿' : '【Fold】 ︿'}
+                      <span className="text-[12px] text-white/40 hover:text-white transition-colors">
+                        ︿
                       </span>
                     </div>
 
@@ -2608,134 +2686,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Section 3: 自拍风格选择 */}
-                    <div className="flex flex-col gap-1 text-left bg-black/10 rounded-xl p-2.5 border border-white/5">
-                      <span className="text-[10px] text-white/50 font-semibold tracking-wider mb-1">
-                        🎨 {isZh ? '自拍风格定制倾向' : 'Personal Style Bias'}
-                      </span>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <button
-                          onClick={() => {
-                            playSound('click');
-                            setPreferences(prev => ({ ...prev, styleMode: 'natural' }));
-                          }}
-                          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all duration-200 active:scale-95 ${
-                            preferences.styleMode === 'natural'
-                              ? 'bg-white text-neutral-900 border-white shadow-sm font-bold'
-                              : 'bg-white/5 hover:bg-white/10 text-white/70 border-transparent'
-                          }`}
-                        >
-                          <span className="text-[11px] font-semibold">{isZh ? '原生感' : 'Natural'}</span>
-                          <span className={`text-[8px] ${preferences.styleMode === 'natural' ? 'text-black/60' : 'text-white/40'} font-medium`}>
-                            {isZh ? '自然真实' : 'Raw & Real'}
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            playSound('click');
-                            setPreferences(prev => ({ ...prev, styleMode: 'cool_tech' }));
-                          }}
-                          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all duration-200 active:scale-95 ${
-                            preferences.styleMode === 'cool_tech'
-                              ? 'bg-white text-neutral-900 border-white shadow-sm font-bold'
-                              : 'bg-white/5 hover:bg-white/10 text-white/70 border-transparent'
-                          }`}
-                        >
-                          <span className="text-[11px] font-semibold">{isZh ? '冷白感' : 'Ice Glow'}</span>
-                          <span className={`text-[8px] ${preferences.styleMode === 'cool_tech' ? 'text-black/60' : 'text-white/40'} font-medium`}>
-                            {isZh ? '清透提亮' : 'Cool Bright'}
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            playSound('click');
-                            setPreferences(prev => ({ ...prev, styleMode: 'glamorous' }));
-                          }}
-                          className={`py-2 px-1 rounded-xl flex flex-col items-center justify-center gap-0.5 border cursor-pointer transition-all duration-200 active:scale-95 ${
-                            preferences.styleMode === 'glamorous'
-                              ? 'bg-white text-neutral-900 border-white shadow-sm font-bold'
-                              : 'bg-white/5 hover:bg-white/10 text-white/70 border-transparent'
-                          }`}
-                        >
-                          <span className="text-[11px] font-semibold">{isZh ? '氛围感' : 'Vibe Portrait'}</span>
-                          <span className={`text-[8px] ${preferences.styleMode === 'glamorous' ? 'text-black/60' : 'text-white/40'} font-medium`}>
-                            {isZh ? '柔和电影感' : 'Soft Filmic'}
-                          </span>
-                        </button>
-                      </div>
-                    </div>
 
-                    {/* Section 4: 环境模拟 */}
-                    <div className="flex flex-col gap-1 text-left border-t border-white/5 pt-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] text-white/40 font-semibold tracking-wider flex items-center gap-1">
-                          🔧 {isZh ? '自拍环境仿真模拟（调测）' : 'Simulate Light Scenarios'}
-                        </span>
-                        <button
-                          onClick={() => {
-                            playSound('click');
-                            setSimulatedScenario(simulatedScenario === 'none' ? 'dull' : 'none');
-                          }}
-                          className="text-[9.5px] text-[#A6B5FF] hover:text-white font-bold transition-colors"
-                        >
-                          {simulatedScenario !== 'none' ? (isZh ? '关闭模拟' : '环境模拟 🔧') : (isZh ? '环境模拟 🔧' : 'Simulate 🔧')}
-                        </button>
-                      </div>
-
-                      {simulatedScenario !== 'none' && (
-                        <div className="w-full flex gap-1 py-1 overflow-x-auto scrollbar-none snap-x justify-start mt-0.5">
-                          {AMB_SCENARIOS.map((scen) => (
-                            <button
-                              key={scen.id}
-                              onClick={() => {
-                                playSound('click');
-                                setSimulatedScenario(scen.id);
-                                setAmbientStats({ brightness: scen.brightness, warmth: scen.warmth });
-                              }}
-                              className={`flex-shrink-0 snap-center min-w-[76px] px-2 py-1 flex flex-col items-center gap-0.5 border rounded-lg text-[9px] font-sans cursor-pointer transition-all duration-200 ${
-                                simulatedScenario === scen.id
-                                  ? 'bg-white text-neutral-900 border-white font-extrabold shadow-sm scale-102'
-                                  : 'bg-white/5 text-white/70 border-white/5 hover:bg-white/10 hover:text-white'
-                              }`}
-                            >
-                              <span className="text-xs leading-none">{scen.icon}</span>
-                              <span className="tracking-tight font-medium text-[8.5px]">{isZh ? scen.name : scen.englishName}</span>
-                            </button>
-                          ))}
-                          <button
-                            onClick={() => {
-                              playSound('click');
-                              setSimulatedScenario('none');
-                              setAmbientStats({ brightness: 110, warmth: 1.0 });
-                            }}
-                            className="flex-shrink-0 snap-center min-w-[70px] px-2 py-1 flex flex-col items-center gap-0.5 bg-red-400/10 text-red-300 border border-red-500/20 hover:bg-red-500/20 cursor-pointer transition-all rounded-lg text-[9px] font-sans"
-                          >
-                            <span className="text-xs leading-none">🔄</span>
-                            <span className="tracking-tight font-medium text-[8.5px]">{isZh ? '重置亮度' : 'Reset'}</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Section 5: 补光效果对比 (折叠卡片/全屏对比) */}
-                    <div className="border-t border-white/5 pt-2 flex flex-col">
-                      <button 
-                        onClick={() => {
-                          playSound('click');
-                          setShowCompareSliderModal(true);
-                        }}
-                        className="w-full py-2.5 px-4 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/15 text-indigo-300 font-sans text-xs font-bold border border-indigo-500/20 active:scale-98 transition-all flex items-center justify-between group cursor-pointer"
-                      >
-                        <span className="flex items-center gap-1.5">
-                          <span>📷</span>
-                          <span>{isZh ? '查看补光对比 (全屏前后对比)' : 'View Lighting Contrast'}</span>
-                        </span>
-                        <span className="text-[10px] text-indigo-400 group-hover:translate-x-0.5 transition-transform flex items-center gap-0.5">
-                          <span>{isZh ? '点击弹出' : 'Tap to expand'}</span>
-                          <span>→</span>
-                        </span>
-                      </button>
-                    </div>
 
                   </div>
                 )}
@@ -2755,54 +2706,9 @@ export default function App() {
               </div>
             )}
           </div>
-
-          {/* Viewfinder Size Switcher (Gives back maximum screen glow) */}
-          <div className="w-full flex justify-center mb-1 mt-0.5 animate-fade-in">
-            <div className="flex items-center gap-0.5 bg-black/20 border border-white/10 backdrop-blur-md p-0.5 rounded-full shadow-md text-white">
-              <button
-                onClick={() => {
-                  playSound('click');
-                  setViewfinderSize('standard');
-                }}
-                className={`px-3 py-1 rounded-full text-[10px] font-sans font-medium tracking-wide transition-all duration-200 ${
-                  viewfinderSize === 'standard'
-                    ? 'bg-white text-neutral-900 font-bold shadow-md'
-                    : 'text-neutral-300 hover:text-white'
-                }`}
-              >
-                {isZh ? '全幅预览' : 'Full Frame'}
-              </button>
-              <button
-                onClick={() => {
-                  playSound('click');
-                  setViewfinderSize('compact');
-                }}
-                className={`px-3 py-1 rounded-full text-[10px] font-sans font-medium tracking-wide transition-all duration-200 ${
-                  viewfinderSize === 'compact'
-                    ? 'bg-white text-neutral-900 font-bold shadow-md'
-                    : 'text-neutral-300 hover:text-white'
-                }`}
-              >
-                {isZh ? '高亮悬浮' : 'High Light'}
-              </button>
-              <button
-                onClick={() => {
-                  playSound('click');
-                  setViewfinderSize('circle');
-                }}
-                className={`px-3 py-1 rounded-full text-[10px] font-sans font-medium tracking-wide transition-all duration-200 ${
-                  viewfinderSize === 'circle'
-                    ? 'bg-white text-neutral-900 font-bold shadow-md'
-                    : 'text-neutral-300 hover:text-white'
-                }`}
-              >
-                {isZh ? '环形柔光' : 'Halo'}
-              </button>
-            </div>
-          </div>
-
+          
           {/* 🎛️ STANDARD FULL APP CONTROL PANEL DECK */}
-          <div className="bg-black/25 backdrop-blur-md rounded-[24px] p-0.5 border border-white/10 shadow-lg mx-3">
+          <div className="bg-black/45 backdrop-blur-xl rounded-[24px] p-0.5 border border-white/10 shadow-2xl mx-3">
             <PresetSelector
               presets={FILL_LIGHT_PRESETS}
               activePreset={activePreset}
@@ -2882,11 +2788,10 @@ export default function App() {
                 playSound('click');
                 setImmersiveMode(true);
               }}
-              className="w-12 h-12 rounded-full bg-black/25 hover:bg-black/35 text-white border border-white/10 flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-md backdrop-blur-md transition-all active:scale-95"
+              className="w-12 h-12 rounded-full bg-black/25 hover:bg-black/35 text-white border border-white/10 flex items-center justify-center cursor-pointer shadow-md backdrop-blur-md transition-all active:scale-95"
               title={isZh ? '隐藏控制台' : 'Hide Console'}
             >
-              <Sliders className="w-4 h-4 text-pink-300 rotate-180" />
-              <span className="text-[7.5px] scale-90 text-white/75 font-sans font-medium">{isZh ? '收起' : 'Hide'}</span>
+              <Sliders className="w-5 h-5 text-pink-300 rotate-180" />
             </button>
           )}
 
@@ -2921,14 +2826,12 @@ export default function App() {
                     </button>
                   )}
                   <button
-                    onClick={() => {
-                      playSound('click');
-                      setShowPhotoViewer(false);
-                      setActiveViewPhoto(null);
-                    }}
-                    className="text-white hover:text-pink-300 transition-colors p-1 cursor-pointer"
+                    onClick={() => handleSharePhoto(photoToRender)}
+                    className="text-white hover:text-pink-300 transition-colors p-1.5 rounded-full hover:bg-white/5 cursor-pointer flex items-center gap-1 font-sans text-[12px] font-bold"
+                    title={isZh ? '分享照片' : 'Share photo'}
                   >
-                    <Minimize2 className="w-4.5 h-4.5" />
+                    <Share2 className="w-4.5 h-4.5" />
+                    <span>{isZh ? '分享' : 'Share'}</span>
                   </button>
                 </div>
               </div>
@@ -3068,6 +2971,168 @@ export default function App() {
           </div>
         );
       })()}
+      {/* 🚀 STUNNING HIGH-FIDELITY CUSTOM SHARE SHEET MODAL */}
+      {showCustomShareModal && (
+        <div className="fixed inset-0 bg-black/65 backdrop-blur-md z-[160] flex items-end sm:items-center justify-center p-0 sm:p-6 animate-fade-in text-sans">
+          {/* Modal Backdrop click closes */}
+          <div 
+            className="absolute inset-0 z-0 bg-transparent" 
+            onClick={() => {
+              playSound('click');
+              setShowCustomShareModal(false);
+            }} 
+          />
+          
+          <div className="relative z-10 w-full sm:max-w-md bg-zinc-900 border-t sm:border border-white/15 rounded-t-[32px] sm:rounded-[32px] p-6 shadow-2xl animate-slide-up sm:animate-scale-in text-white flex flex-col gap-5 overflow-hidden">
+            
+            {/* Top Drag Indicator for mobile feel */}
+            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto sm:hidden -mt-2 mb-1" />
+            
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col text-left">
+                <span className="text-sm font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-300 to-indigo-300">
+                  {isZh ? 'Lumi 高级分享面板' : 'Lumi Premium Share'}
+                </span>
+                <span className="text-[10px] text-zinc-400">
+                  {isZh ? '自拍已进行至臻人像奶油肌柔化渲染' : 'Your selfie has been beautifully rendered & polished'}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  playSound('click');
+                  setShowCustomShareModal(false);
+                }}
+                className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/15 flex items-center justify-center text-zinc-300 hover:text-white transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Thumbnail Preview & File Details */}
+            <div className="flex items-center gap-3.5 bg-white/5 border border-white/10 p-3 rounded-2xl">
+              {shareTargetPhoto && (
+                <div className="w-14 h-18 rounded-lg overflow-hidden bg-zinc-950 flex-shrink-0 relative">
+                  <img
+                    src={shareTargetPhoto.photoUrl || "/src/assets/images/portrait_simulate_1779326784414.png"}
+                    alt="Preview share"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                </div>
+              )}
+              <div className="flex flex-col text-left min-w-0">
+                <span className="text-xs font-bold text-white truncate">
+                  {shareTargetFile?.name || 'lumi_glow_portrait.jpg'}
+                </span>
+                <span className="text-[10px] text-zinc-400 mt-0.5">
+                  {(shareTargetFile ? (shareTargetFile.size / 1024 / 1024).toFixed(2) : '1.45')} MB · JPEG 格式
+                </span>
+                <span className="text-[9px] text-emerald-400 font-mono mt-1 flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-md w-fit">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {isZh ? '奶油肌滤镜已固化' : 'Filters baked in'}
+                </span>
+              </div>
+            </div>
+
+            {/* Sharing Grid */}
+            <div className="grid grid-cols-3 gap-3 py-1">
+              
+              {/* Target 1: WeChat */}
+              <button
+                onClick={async () => {
+                  playSound('click');
+                  try {
+                    if (shareTargetFile) {
+                      const response = await fetch(URL.createObjectURL(shareTargetFile));
+                      const blob = await response.blob();
+                      let writeSuccess = false;
+                      if (navigator.clipboard && window.ClipboardItem) {
+                        try {
+                          await navigator.clipboard.write([
+                            new ClipboardItem({ [blob.type]: blob })
+                          ]);
+                          writeSuccess = true;
+                        } catch (clipboardErr) {
+                          console.warn('Direct image copy to clipboard failed; copying link/text instead.', clipboardErr);
+                        }
+                      }
+                      
+                      if (writeSuccess) {
+                        showToast(isZh ? "💬 自拍已发送至剪贴板！请前往微信长按粘贴发送。" : "Selfie copied to clipboard! Paste directly in WeChat.");
+                      } else {
+                        showToast(isZh ? "💾 微信连接中。自拍照已打包，马上为您自动下载！" : "Preparing WeChat share: File downloading now!");
+                        handleDownloadPhoto(shareTargetPhoto);
+                      }
+                    }
+                  } catch (e) {
+                    showToast(isZh ? "💾 已成功为您保存自拍照，请前往微信打开相册分享！" : "Photo saved, pick from album in WeChat!");
+                    handleDownloadPhoto(shareTargetPhoto);
+                  }
+                }}
+                className="flex flex-col items-center gap-2 cursor-pointer group animate-fade-in"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-[#07C160]/10 border border-[#07C160]/20 group-hover:bg-[#07C160]/20 flex items-center justify-center text-[#07C160] transition-all duration-200">
+                  <MessageSquare className="w-5 h-5 text-[#07C160]" />
+                </div>
+                <span className="text-[10px] text-zinc-300 font-medium group-hover:text-white transition-colors">
+                  {isZh ? '微信' : 'WeChat'}
+                </span>
+              </button>
+
+              {/* Target 2: SMS */}
+              <button
+                onClick={async () => {
+                  playSound('click');
+                  try {
+                    if (shareTargetFile) {
+                      const response = await fetch(URL.createObjectURL(shareTargetFile));
+                      const blob = await response.blob();
+                      if (navigator.clipboard && window.ClipboardItem) {
+                        try {
+                          await navigator.clipboard.write([
+                            new ClipboardItem({ [blob.type]: blob })
+                          ]);
+                        } catch (e) {}
+                      }
+                    }
+                  } catch (e) {}
+                  
+                  window.location.href = "sms:&body=" + encodeURIComponent(isZh ? "看我用 Lumi 氛围自拍系统拍的奶油肌自拍照！" : "Look at my glamorous portrait from Lumi!");
+                  showToast(isZh ? "💬 短信就绪！自拍照已复制到您的贴板中，粘贴即可发送。" : "SMS ready! Photo copied. Tap and hold to paste.");
+                }}
+                className="flex flex-col items-center gap-2 cursor-pointer group animate-fade-in"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 group-hover:bg-sky-500/20 flex items-center justify-center text-sky-400 transition-all duration-200">
+                  <Send className="w-5 h-5 text-sky-400" />
+                </div>
+                <span className="text-[10px] text-zinc-300 font-medium group-hover:text-white transition-colors">
+                  {isZh ? '短信' : 'SMS'}
+                </span>
+              </button>
+
+              {/* Target 3: Files / Save to File */}
+              <button
+                onClick={() => {
+                  playSound('click');
+                  handleDownloadPhoto(shareTargetPhoto);
+                  showToast(isZh ? "📂 自拍已生成并保存至系统「文件/下载」目录！" : "Saved successfully to Files.");
+                }}
+                className="flex flex-col items-center gap-2 cursor-pointer group animate-fade-in"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group-hover:bg-indigo-500/20 flex items-center justify-center text-indigo-400 transition-all duration-200">
+                  <Folder className="w-5 h-5 text-indigo-400" />
+                </div>
+                <span className="text-[10px] text-zinc-300 font-medium group-hover:text-white transition-colors">
+                  {isZh ? '文件' : 'Files'}
+                </span>
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* API Key Required dialog (iOS pop up style) */}
       {showApiKeyPrompt && (

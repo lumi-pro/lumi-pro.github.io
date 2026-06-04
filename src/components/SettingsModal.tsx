@@ -54,7 +54,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     return localStorage.getItem('lumi_api_last_saved') || null;
   });
   const [showKey, setShowKey] = useState<boolean>(false);
-  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
 
   // Connection testing states
@@ -114,130 +113,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
       {/* Settings Scroll Area */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-5">
-        {/* 1. Camera Input Source Selection */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-heading font-semibold tracking-wider text-[#cca0ab] uppercase block px-1">
-            {isZh ? '相机预览源设置' : 'Camera Input Mode'}
-          </span>
-          <div className="bg-white rounded-2xl border border-pink-100/60 overflow-hidden shadow-sm">
-            <button
-              onClick={() => onToggleSimulatedPortrait(false)}
-              className={`w-full px-4 py-3 flex items-center justify-between border-b border-pink-50 transition-colors text-left ${
-                !useSimulatedPortrait ? 'bg-[#ffeaf0]/25' : 'hover:bg-neutral-50'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <Camera className="w-4 h-4 text-neutral-500" />
-                <div>
-                  <p className="text-xs font-medium text-neutral-800">
-                    {isZh ? '真实前置镜头' : 'Real Front-Facing Camera'}
-                  </p>
-                  <p className="text-[10px] text-neutral-400">调用系统硬件获取最真实光影状态</p>
-                </div>
-              </div>
-              {!useSimulatedPortrait && <span className="w-2 h-2 rounded-full bg-[#ff80a3]" />}
-            </button>
-
-            <button
-              onClick={() => onToggleSimulatedPortrait(true)}
-              className={`w-full px-4 py-3 flex items-center justify-between transition-colors text-left ${
-                useSimulatedPortrait ? 'bg-[#ffeaf0]/25' : 'hover:bg-neutral-50'
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <User className="w-4 h-4 text-neutral-500" />
-                <div>
-                  <p className="text-xs font-medium text-neutral-800">
-                    {isZh ? '高保真自拍照模拟器' : 'High-Fidelity Simulated Model'}
-                  </p>
-                  <p className="text-[10px] text-neutral-400">使用专业 SODA 级自拍照作为柔光样片</p>
-                </div>
-              </div>
-              {useSimulatedPortrait && <span className="w-2 h-2 rounded-full bg-[#ff80a3]" />}
-            </button>
-          </div>
-        </div>
-
-        {/* 2. Toggle Settings Section */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-heading font-semibold tracking-wider text-[#cca0ab] uppercase block px-1">
-            {isZh ? '自拍相机功能' : 'Selfie Features'}
-          </span>
-          <div className="bg-white rounded-2xl border border-pink-100/60 divide-y divide-pink-50 overflow-hidden shadow-sm">
-            {/* Mirror Camera */}
-            <div className="px-4 py-3 flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium text-neutral-800">
-                  {isZh ? '前置镜头镜像' : 'Mirror Selfie Stream'}
-                </span>
-                <span className="text-[10px] text-neutral-400">
-                  {isZh ? '还原镜子里的左右自然角度' : 'Flip rendering to natural mirror perspective'}
-                </span>
-              </div>
-              <button
-                onClick={() => toggleSetting('mirrorCamera')}
-                className={`w-11 h-6 rounded-full transition-colors relative flex items-center focus:outline-none ${
-                  settings.mirrorCamera ? 'bg-[#ff80a3]' : 'bg-neutral-200'
-                }`}
-              >
-                <span
-                  className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform absolute ${
-                    settings.mirrorCamera ? 'translate-x-[22px]' : 'translate-x-[2px]'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Grid Helper lines */}
-            <div className="px-4 py-3 flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium text-neutral-800">
-                  {isZh ? '黄金九宫格辅助线' : 'Rule of Thirds Grid'}
-                </span>
-                <span className="text-[10px] text-neutral-400">
-                  {isZh ? '帮助女生自拍画面完美构图' : 'Compose professional selfie with lines'}
-                </span>
-              </div>
-              <button
-                onClick={() => toggleSetting('gridEnabled')}
-                className={`w-11 h-6 rounded-full transition-colors relative flex items-center focus:outline-none ${
-                  settings.gridEnabled ? 'bg-[#ff80a3]' : 'bg-neutral-200'
-                }`}
-              >
-                <span
-                  className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform absolute ${
-                    settings.gridEnabled ? 'translate-x-[22px]' : 'translate-x-[2px]'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Simulated Haptic */}
-            <div className="px-4 py-3 flex items-center justify-between">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium text-neutral-800">
-                  {isZh ? 'Apple 系统音效与触感' : 'System Sound & Touch'}
-                </span>
-                <span className="text-[10px] text-neutral-400">
-                  {isZh ? '滑动调节或快门时提供清脆回响' : 'Sound response and vibration-pulse clicks'}
-                </span>
-              </div>
-              <button
-                onClick={() => toggleSetting('hapticFeedback')}
-                className={`w-11 h-6 rounded-full transition-colors relative flex items-center focus:outline-none ${
-                  settings.hapticFeedback ? 'bg-[#ff80a3]' : 'bg-neutral-200'
-                }`}
-              >
-                <span
-                  className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform absolute ${
-                    settings.hapticFeedback ? 'translate-x-[22px]' : 'translate-x-[2px]'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* AI API Configuration Section */}
         <div className="flex flex-col gap-2">
           <span className="text-[10px] font-heading font-semibold tracking-wider text-[#cca0ab] uppercase block px-1 animate-pulse">
@@ -263,21 +138,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   const defaultsMap: Record<string, { url: string; model: string }> = {
                     gemini: { url: 'https://generativelanguage.googleapis.com', model: 'gemini-2.5-flash' },
                     openai: { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' },
-                    doubao: { url: 'https://ark.cn-beijing.volces.com/api/v3', model: 'doubao-1.5-pro-32k' },
+                    doubao: { url: 'https://ark.cn-beijing.volces.com/api/v3', model: 'ep-xxxxxxxxxxxx' },
                     deepseek: { url: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
                     claude: { url: 'https://api.anthropic.com', model: 'claude-3-5-sonnet' },
                     openrouter: { url: 'https://openrouter.ai/api/v1', model: 'google/gemini-2.5-flash' },
                     siliconflow: { url: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3' },
-                    custom: { url: '', model: '' }
+                    custom: { url: 'https://api.openai.com/v1', model: 'gpt-4o-mini' }
                   };
                   const fallbackConfig = defaultsMap[prov];
                   if (fallbackConfig) {
                     setApiEndpoint(fallbackConfig.url);
                     setApiModel(fallbackConfig.model);
                   }
-                  localStorage.setItem('lumi_api_provider', prov);
-                  localStorage.setItem('lumi_api_endpoint', fallbackConfig?.url || '');
-                  localStorage.setItem('lumi_api_model', fallbackConfig?.model || '');
+                  // Reset test connection status on provider changes
                   setTestStatus('idle');
                   setTestFeedback('');
                 }}
@@ -302,39 +175,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <input
                 type="text"
                 value={apiEndpoint}
-                onChange={(e) => { setApiEndpoint(e.target.value); localStorage.setItem('lumi_api_endpoint', e.target.value); }}
+                onChange={(e) => setApiEndpoint(e.target.value)}
                 placeholder="https://api.openai.com/v1"
                 className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
               />
             </div>
 
-            {/* Advanced: Model Override */}
-            <div className="flex flex-col gap-1">
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center justify-between text-[11px] font-medium text-[#cca0ab] hover:text-[#ff80a3] transition-colors"
-              >
-                <span>{isZh ? '高级选项 (模型自定义)' : 'Advanced (Model Override)'}</span>
-                <span className="text-[9px]">{showAdvanced ? '︿' : '∨'}</span>
-              </button>
-              {showAdvanced && (
-                <input
-                  type="text"
-                  value={apiModel}
-                  onChange={(e) => { setApiModel(e.target.value); localStorage.setItem('lumi_api_model', e.target.value); }}
-                  placeholder={
-                    apiProvider === 'doubao' ? (isZh ? '火山方舟部署ID，如 ep-20250101xxxx' : 'Endpoint ID, e.g. ep-20250101xxxx')
-                    : isZh ? '留空使用默认模型' : 'Leave empty for default model'
-                  }
-                  className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
-                />
-              )}
-              {!showAdvanced && apiModel && (
-                <span className="text-[9px] text-neutral-400">
-                  {isZh ? `当前模型：${apiModel}` : `Model: ${apiModel}`}
-                </span>
-              )}
+            {/* Model Name Input */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium text-[#cca0ab]">
+                {isZh ? '模型名称 (Model Name)' : 'Model'}
+              </label>
+              <input
+                type="text"
+                value={apiModel}
+                onChange={(e) => setApiModel(e.target.value)}
+                placeholder="gpt-4o-mini"
+                className="w-full h-9 rounded-xl border border-pink-100 px-3 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
+              />
             </div>
 
             {/* API Key Input */}
@@ -346,7 +204,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <input
                   type={showKey ? 'text' : 'password'}
                   value={apiKey}
-                  onChange={(e) => { setApiKey(e.target.value); localStorage.setItem('lumi_api_key', e.target.value); }}
+                  onChange={(e) => setApiKey(e.target.value)}
                   placeholder={isZh ? '请输入您的 API Key' : 'Enter your API Key'}
                   className="w-full h-9 rounded-xl border border-pink-100 pl-3 pr-10 bg-[#fdfafb] text-neutral-800 text-xs focus:outline-none focus:border-[#ff80a3] transition-colors border-solid"
                 />
@@ -410,7 +268,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     const result = await response.json();
                     if (result.success) {
                       setTestStatus('success');
-                      setTestFeedback(isZh ? `“已连接到 ${result.message.replace('已连接到 ', '')}”` : `Connected to ${apiProvider}`);
+                      setTestFeedback(isZh ? `“已连接 to ${result.message || apiProvider}”` : `Connected to ${apiProvider}`);
                     } else {
                       setTestStatus('failed');
                       setTestFeedback(result.error || (isZh ? '验证失败，请确认端点与密令' : 'Verification failed.'));
@@ -460,40 +318,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         </div>
 
-        {/* 3. Internationalization Section */}
-        <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-heading font-semibold tracking-wider text-[#cca0ab] uppercase block px-1">
-            {isZh ? '通用设置' : 'General Options'}
-          </span>
-          <div className="bg-white rounded-2xl border border-pink-100/60 p-4 shadow-sm flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-neutral-800 flex items-center gap-2">
-                <Languages className="w-4 h-4 text-neutral-400" />
-                {isZh ? '界面语言' : 'App Language'}
-              </span>
-              <div className="flex rounded-lg bg-neutral-100 p-0.5 border border-neutral-200">
-                <button
-                  onClick={() => setLanguage('zh')}
-                  className={`px-3 py-1 text-[11px] font-medium rounded-md transition-all ${
-                    isZh ? 'bg-white text-[#ff80a3] shadow-sm' : 'text-neutral-500'
-                  }`}
-                >
-                  简体中文
-                </button>
-                <button
-                  onClick={() => setLanguage('en')}
-                  className={`px-3 py-1 text-[11px] font-medium rounded-md transition-all ${
-                    !isZh ? 'bg-white text-[#ff80a3] shadow-sm' : 'text-neutral-500'
-                  }`}
-                >
-                  English
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Minimal footer credits */}
+        {/* Minimal footer credits */}
         <div className="text-center py-4 border-t border-pink-50 text-[10px] text-neutral-400 flex flex-col items-center gap-1 mt-4">
           <span>Lumi v1.0.0 (Atmosphere Special Edit)</span>
           <span>© 2026 App Store "Lumi" Light Design Lab</span>

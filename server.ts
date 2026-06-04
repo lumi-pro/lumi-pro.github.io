@@ -15,11 +15,10 @@ const PORT = 3000;
 function supportsVision(provider: string, model: string): boolean {
   const p = (provider || "").toLowerCase();
   const m = (model || "").toLowerCase();
-  if (p === "deepseek" || p === "custom" || p === "doubao") return false;
+  if (p === "deepseek") return false;
   if (m.includes("deepseek-chat") || m.includes("deepseek-r1") || m.includes("deepseek-v3") || m.includes("reasoner")) {
     return false;
   }
-  if (m.includes("qwen") && !m.includes("vl") && !m.includes("vision")) return false;
   return true;
 }
 
@@ -42,25 +41,7 @@ app.post("/api/ai/test-connection", async (req, res) => {
 
     const cleanBaseUrl = (baseUrl || "").trim();
     const cleanModel = (model || "").trim();
-    const provRaw = (provider || "gemini").toLowerCase();
-
-    const providerDefaultUrls: Record<string, string[]> = {
-      gemini: ["googleapis.com", "generativelanguage"],
-      claude: ["anthropic.com"],
-      openai: ["api.openai.com"],
-      doubao: ["ark.cn-beijing.volces.com", "volces.com"],
-      deepseek: ["api.deepseek.com"],
-      openrouter: ["openrouter.ai"],
-      siliconflow: ["api.siliconflow.cn", "siliconflow.cn"],
-    };
-
-    let prov = provRaw;
-    if (cleanBaseUrl && providerDefaultUrls[provRaw]) {
-      const isMatch = providerDefaultUrls[provRaw].some(d => cleanBaseUrl.includes(d));
-      if (!isMatch) {
-        prov = "custom";
-      }
-    }
+    const prov = (provider || "gemini").toLowerCase();
 
     let testSuccess = false;
     let errorMessage = "";
@@ -107,13 +88,7 @@ app.post("/api/ai/test-connection", async (req, res) => {
       if (!targetUrl.startsWith("http")) {
         targetUrl = "https://" + targetUrl;
       }
-      if (!targetUrl.includes("/messages")) {
-        if (!targetUrl.includes("/v1")) {
-          targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
-        } else {
-          targetUrl = targetUrl.replace(/\/+$/, "") + "/messages";
-        }
-      }
+      targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -160,10 +135,7 @@ app.post("/api/ai/test-connection", async (req, res) => {
       if (!targetUrl.startsWith("http")) {
         targetUrl = "https://" + targetUrl;
       }
-      targetUrl = targetUrl.replace(/\/+$/, "");
-      if (!targetUrl.includes("/chat/completions")) {
-        targetUrl = targetUrl + "/chat/completions";
-      }
+      targetUrl = targetUrl.replace(/\/+$/, "") + "/chat/completions";
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -172,7 +144,7 @@ app.post("/api/ai/test-connection", async (req, res) => {
 
       const defaultModel = prov === "openai" ? "gpt-4o-mini" : 
                            prov === "deepseek" ? "deepseek-chat" : 
-                           prov === "doubao" ? "doubao-1.5-pro-32k" :
+                           prov === "doubao" ? "ep-xxxxxxxxxxxx" :
                            prov === "openrouter" ? "google/gemini-2.5-flash" :
                            prov === "siliconflow" ? "deepseek-ai/DeepSeek-V3" : "gpt-4o-mini";
 
@@ -270,12 +242,10 @@ app.post("/api/gemini/analyze", async (req, res) => {
     reasoningEn: "✨ [Lumi Local Synced] Automatically tuned lighting parameters from active sensors. Tap Settings to plug in your AI Provider for full fashion photographer diagnostic recommendations!"
   };
 
+  // If no credentials are provided in either request body or server ENV, return clean sensor fallback right away, without failing "busy"
   const activeKey = apiKey || (provider === "gemini" || !provider ? process.env.GEMINI_API_KEY : "");
   if (!activeKey) {
-    return res.status(403).json({
-      error: true,
-      message: "API Key 未配置。请在设置中填写您的 API Key 后重试。"
-    });
+    return res.json(localFallbackReport);
   }
 
   try {
@@ -365,28 +335,9 @@ app.post("/api/gemini/analyze", async (req, res) => {
       CRITICAL SYSTEM DIRECTIVE: Output a valid stringified JSON object strictly containing the keys: ${schemaKeys.join(", ")}. Ensure there are no surrounding markdown code tags in your raw REST output unless instructed, and keep JSON parseable.
     `;
 
-    const provRaw = (provider || "gemini").toLowerCase();
+    const prov = (provider || "gemini").toLowerCase();
     const cleanBaseUrl = (apiEndpoint || "").trim();
     const cleanModel = (model || "").trim();
-
-    const providerDefaultUrls: Record<string, string[]> = {
-      gemini: ["googleapis.com", "generativelanguage"],
-      claude: ["anthropic.com"],
-      openai: ["api.openai.com"],
-      doubao: ["ark.cn-beijing.volces.com", "volces.com"],
-      deepseek: ["api.deepseek.com"],
-      openrouter: ["openrouter.ai"],
-      siliconflow: ["api.siliconflow.cn", "siliconflow.cn"],
-    };
-
-    let prov = provRaw;
-    if (cleanBaseUrl && providerDefaultUrls[provRaw]) {
-      const isMatch = providerDefaultUrls[provRaw].some(d => cleanBaseUrl.includes(d));
-      if (!isMatch) {
-        prov = "custom";
-      }
-    }
-
     const isVision = supportsVision(prov, cleanModel);
 
     let resultText = "";
@@ -464,13 +415,7 @@ app.post("/api/gemini/analyze", async (req, res) => {
       if (!targetUrl.startsWith("http")) {
         targetUrl = "https://" + targetUrl;
       }
-      if (!targetUrl.includes("/messages")) {
-        if (!targetUrl.includes("/v1")) {
-          targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
-        } else {
-          targetUrl = targetUrl.replace(/\/+$/, "") + "/messages";
-        }
-      }
+      targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -524,10 +469,7 @@ app.post("/api/gemini/analyze", async (req, res) => {
       if (!targetUrl.startsWith("http")) {
         targetUrl = "https://" + targetUrl;
       }
-      targetUrl = targetUrl.replace(/\/+$/, "");
-      if (!targetUrl.includes("/chat/completions")) {
-        targetUrl = targetUrl + "/chat/completions";
-      }
+      targetUrl = targetUrl.replace(/\/+$/, "") + "/chat/completions";
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -536,7 +478,7 @@ app.post("/api/gemini/analyze", async (req, res) => {
 
       const defaultModel = prov === "openai" ? "gpt-4o-mini" : 
                            prov === "deepseek" ? "deepseek-chat" : 
-                           prov === "doubao" ? "doubao-1.5-pro-32k" :
+                           prov === "doubao" ? "ep-xxxxxxxxxxxx" :
                            prov === "openrouter" ? "google/gemini-2.5-flash" :
                            prov === "siliconflow" ? "deepseek-ai/DeepSeek-V3" : "gpt-4o-mini";
 
@@ -566,7 +508,7 @@ app.post("/api/gemini/analyze", async (req, res) => {
       };
 
       // Add json object support if supported
-      if (prov !== "openrouter" && prov !== "custom" && prov !== "doubao") {
+      if (prov !== "openrouter") {
         bodyData.response_format = { type: "json_object" };
       }
 
@@ -604,13 +546,29 @@ app.post("/api/gemini/analyze", async (req, res) => {
     res.json(parsedData);
 
   } catch (apiError: any) {
-    console.warn("Lumi Vision API error:", apiError?.message || apiError);
+    console.warn("Lumi Vision API error, triggering helpful diagnostic mode:", apiError?.message || apiError);
 
-    res.status(502).json({
-      error: true,
-      message: apiError?.message || "Unknown API error",
-      provider: provider || "unknown"
-    });
+    // Provide a helpful system explanation indicating the error and provider state instead of just saying "cloud is busy"
+    const displayMessageZh = `✨ [Lumi AI 异常自检] 无法调用您配置的 ${provider || 'AI'} 接口。错误提示: "${apiError?.message || 'Unauthorized Key or network timeout'}"。请点击右上角「设置」检查您的 API Key 或是 Base URL 端点配置后重试。目前已为您启动本地重力防抖补偿补光：`;
+    const displayMessageEn = `✨ [Lumi AI Diagnostic] Unable to trace connection to your ${provider || 'AI'} provider. Message: "${apiError?.message || 'Access Denied'}" Please double check keys in top-right Settings. Active local responsive tuning running:`;
+
+    const errSummaryZh = `由于 AI 服务链接中断（原因：${apiError?.message || '网络连接失效或无效 Key'}），Lumi 已为您顺畅切入本地微晶体传感器微调保护系统`;
+
+    const errorFallback = {
+      skinTone: "已通过多维传感器自习惯分析人像补光",
+      brightness: "已自动调节至护眼黄金自研照度",
+      shadows: "已自动减弱多角度细屑阴影，均匀填补泪沟",
+      sceneCharacteristics: `Lumi 智能光控系统：自适应环境 (${simulatedScenario || '默认室内'})`,
+      problems: errSummaryZh,
+      recommendedPresetId: fallbackPreset,
+      recommendedIntensity: "normal",
+      targetBrightness: preferences?.averageBrightness || 0.80,
+      targetSoftness: preferences?.averageSoftness || 0.70,
+      reasoningZh: displayMessageZh,
+      reasoningEn: displayMessageEn
+    };
+
+    res.json(errorFallback);
   }
 });
 

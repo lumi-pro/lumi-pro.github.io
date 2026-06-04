@@ -84,49 +84,24 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
     <div className="w-full flex flex-col gap-1.5 px-2 py-2 select-none text-left">
       
       {/* ⚡ COMBINED DUAL CONTROLLER HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-b border-white/5 pb-1.5 mb-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-1.5 border-b border-white/8 pb-1.5 mb-1.5">
         
-        {/* Left Part: Intensity Controller */}
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] text-white/40 pl-0.5 select-none uppercase tracking-wide font-mono font-bold">
-            {isZh ? '光感:' : 'LEVEL:'}
-          </span>
-          <div className="flex items-center gap-0.5 bg-black/40 p-0.5 rounded-lg border border-white/5">
-            {intensities.map((lvl) => {
-              const isActive = intensityLevel === lvl.id;
-              return (
-                <button
-                  key={lvl.id}
-                  onClick={() => onIntensityChange(lvl.id)}
-                  className={`px-3 py-0.5 rounded-md text-[9.5px] font-semibold transition-all duration-200 cursor-pointer flex items-center justify-center ${
-                    isActive
-                      ? 'bg-indigo-600/90 text-white font-bold shadow-sm border border-indigo-400/25 scale-[1.02]'
-                      : 'text-neutral-400 hover:text-white hover:bg-white/[0.02]'
-                  }`}
-                >
-                  <span>{isZh ? lvl.labelZh : lvl.labelEn}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* Right Part: Style Category Selector */}
-        <div className="flex items-center gap-1">
-          <span className="text-[10px] text-white/40 select-none uppercase tracking-wide font-mono font-bold">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-zinc-300 select-none uppercase tracking-wide font-sans font-bold">
             {isZh ? '系列:' : 'STYLE:'}
           </span>
-          <div className="flex items-center gap-0.5 bg-black/40 p-0.5 rounded-lg border border-white/5">
+          <div className="flex items-center gap-0.5 bg-black/45 p-0.5 rounded-lg border border-white/10">
             {categories.map((cat) => {
               const isCatActive = selectedCategory === cat.id;
               return (
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-2 py-0.5 rounded-md text-[9.5px] font-semibold transition-all duration-200 cursor-pointer ${
+                  className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all duration-200 cursor-pointer ${
                     isCatActive
-                      ? 'bg-white/10 text-white border border-white/10 shadow-sm font-bold scale-[1.02]'
-                      : 'text-neutral-400 hover:text-white hover:bg-white/[0.02]'
+                      ? 'bg-white text-zinc-950 shadow-md scale-[1.02]'
+                      : 'text-zinc-200 bg-white/10 hover:text-white hover:bg-white/20'
                   }`}
                 >
                   <span>{isZh ? cat.labelZh : cat.labelEn}</span>
@@ -172,15 +147,15 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
                 style={{
                   background: `linear-gradient(135deg, ${preset.color} 30%, ${preset.accentColor || preset.color}dd 100%)`,
                   boxShadow: isActive 
-                    ? `0 0 12px ${preset.accentColor || preset.color}, 0 0 6px rgba(255,255,255,0.85), inset 0 1px 1.5px rgba(255,255,255,0.4)`
+                    ? 'inset 0 1px 1.5px rgba(255,255,255,0.4)'
                     : '0 3px 8px rgba(0,0,0,0.05), inset 0 1px 1.5px rgba(255,255,255,0.2)',
                 }}
               >
                 <div className="w-full h-full rounded-full bg-white/10 backdrop-blur-[2px] flex items-center justify-center relative">
                   {isActive && (
                     <div 
-                      className="w-3.5 h-3.5 rounded-full bg-white text-neutral-800 flex items-center justify-center shadow-lg"
-                      style={{ boxShadow: '0 1px 5px rgba(255,255,255,0.9)' }}
+                      className="w-3.5 h-3.5 rounded-full bg-white text-neutral-800 flex items-center justify-center shadow-sm"
+                      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}
                     >
                       <Check className="w-2.5 h-2.5" strokeWidth={4} />
                     </div>
@@ -191,8 +166,8 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
               {/* Minimalist Swatch Tag */}
               <div className="text-center w-full truncate">
                 <p
-                  className={`text-[9px] tracking-tight font-sans transition-colors font-medium truncate ${
-                    isActive ? 'text-white font-semibold' : 'text-stone-400 hover:text-white'
+                  className={`text-[11.5px] font-bold tracking-wide font-sans transition-colors truncate ${
+                    isActive ? 'text-white' : 'text-zinc-300 hover:text-white'
                   }`}
                   title={preset.description}
                 >
@@ -205,7 +180,7 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
       </div>
 
       {/* Tiny Status Indicator line at the bottom */}
-      <div className="flex items-center justify-between px-1 pt-0.5 text-stone-200/40 text-[8px] font-mono select-none tracking-tight border-t border-white/[0.03]">
+      <div className="flex items-center justify-between px-1 pt-1.5 text-zinc-300/90 text-[10.5px] font-sans font-bold select-none tracking-wide border-t border-white/10">
         <span>
           {splitMode !== 'none'
             ? `${isZh ? '分屏校准 · [双源微调]' : 'SPLIT MODE · CALIBRATED'}`

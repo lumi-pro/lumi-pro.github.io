@@ -84,29 +84,30 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
   useImperativeHandle(ref, () => ({
     capture: async () => {
       const canvas = document.createElement('canvas');
+      const width = 1080;
+      const height = 1440;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         throw new Error('Canvas 2D context not available');
       }
 
+      // Draw the raw un-filtered base image or video
       if (cameraState === 'active' && !useSimulatedPortrait && videoRef.current) {
         const video = videoRef.current;
         const videoW = video.videoWidth;
         const videoH = video.videoHeight;
         
-        const captureW = Math.max(videoW, 1440);
-        const captureH = Math.max(videoH, 1920);
-        canvas.width = captureW;
-        canvas.height = captureH;
-        
         ctx.save();
         if (mirrorCamera) {
-          ctx.translate(captureW, 0);
+          ctx.translate(width, 0);
           ctx.scale(-1, 1);
         }
         
         if (videoW && videoH) {
-          const targetAspect = captureW / captureH;
+          // Centered crop (simulate object-cover) to maintain original aspect ratio without stretching
+          const targetAspect = width / height; // 3:4 = 0.75
           const videoAspect = videoW / videoH;
           
           let sx = 0;
@@ -115,34 +116,34 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
           let sHeight = videoH;
           
           if (videoAspect > targetAspect) {
+            // Video is wider than 3:4 -> Crop horizontally
             sWidth = videoH * targetAspect;
             sx = (videoW - sWidth) / 2;
           } else {
+            // Video is taller than 3:4 -> Crop vertically
             sHeight = videoW / targetAspect;
             sy = (videoH - sHeight) / 2;
           }
           
-          ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, captureW, captureH);
+          ctx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, width, height);
         } else {
-          ctx.drawImage(video, 0, 0, captureW, captureH);
+          ctx.drawImage(video, 0, 0, width, height);
         }
         ctx.restore();
       } else {
+        // Draw raw simulated portrait image
         const img = new Image();
         img.src = portraitImage;
         await new Promise((resolve) => {
           img.onload = resolve;
-          img.onerror = resolve;
+          img.onerror = resolve; // avoid hanging if image loading fails
         });
         
-        const imgW = img.naturalWidth || img.width || 1440;
-        const imgH = img.naturalHeight || img.height || 1920;
-        canvas.width = imgW;
-        canvas.height = imgH;
-
         ctx.save();
+        const imgW = img.naturalWidth || img.width;
+        const imgH = img.naturalHeight || img.height;
         if (imgW && imgH) {
-          const targetAspect = imgW / imgH;
+          const targetAspect = width / height;
           const imgAspect = imgW / imgH;
           
           let sx = 0;
@@ -158,14 +159,14 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
             sy = (imgH - sHeight) / 2;
           }
           
-          ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, imgW, imgH);
+          ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, width, height);
         } else {
-          ctx.drawImage(img, 0, 0, imgW, imgH);
+          ctx.drawImage(img, 0, 0, width, height);
         }
         ctx.restore();
       }
 
-      return canvas.toDataURL('image/jpeg', 1.0);
+      return canvas.toDataURL('image/jpeg', 0.96);
     }
   }));
 
@@ -188,8 +189,8 @@ export const CameraView = forwardRef<{ capture: () => Promise<string> }, CameraV
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: 'user',
-            width: { ideal: 1920 },
-            height: { ideal: 2560 },
+            width: { ideal: 1080 },
+            height: { ideal: 1440 }, // Front selfie optimized portrait aspect
           },
           audio: false,
         });

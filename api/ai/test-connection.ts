@@ -17,12 +17,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { provider, apiKey, baseUrl, model } = req.body;
     if (!apiKey) {
-      return res.status(400).json({ success: false, message: "API Key is required." });
+      return res.status(200).json({ success: false, message: "API Key 未填写。" });
+    }
+
+    const isPlaceholderValue = (val: any) => {
+      if (!val || typeof val !== 'string') return true;
+      const v = val.trim().toLowerCase();
+      return (
+        v === "" ||
+        v.includes("placeholder") ||
+        v.includes("your_api_key") ||
+        v.includes("your_key") ||
+        v === "sk-xxxx" ||
+        v === "ep-xxxxxxxxxxxx" ||
+        v.includes("xxxxxx")
+      );
+    };
+
+    if (isPlaceholderValue(apiKey)) {
+      return res.status(200).json({ success: false, message: "请在输入框中填入具体的有效 API Key 密钥值以测试连接（目前检测到仍使用占位符）。" });
     }
 
     const cleanBaseUrl = (baseUrl || "").trim();
     const cleanModel = (model || "").trim();
     const provRaw = (provider || "gemini").toLowerCase();
+
+    if ((provRaw === "doubao" || cleanBaseUrl.toLowerCase().includes("volces.com") || cleanBaseUrl.toLowerCase().includes("volcengine")) && isPlaceholderValue(cleanModel)) {
+      return res.status(200).json({ success: false, message: "火山引擎「豆包」模型要求填入专属 Endpoint ID 接入点名称（例如 ep-2026xxxxxx-xxxxx）。当前使用的是默认占位符「ep-xxxxxxxxxxxx」，请修改后再试。" });
+    }
 
     let prov = provRaw;
     if (cleanBaseUrl) {

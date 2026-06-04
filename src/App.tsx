@@ -1962,6 +1962,7 @@ export default function App() {
 
       // Save report content
       setAiReport(report);
+      setShowDetailedAnalysis(true); // Automatically expand the report details after click and success
       setManualLockMode(false); // Reset manual lock when they explicitly trigger AI analysis
       setLockedStats(null); // Reset locked base to baseline from newly scanned frame
       
@@ -2271,25 +2272,25 @@ export default function App() {
     
     if (viewfinderSize === 'standard') {
       return {
-        width: 'min(100%, calc(46vh * 0.75))',
+        width: 'min(100%, calc(min(370px, 45vh) * 0.75))',
         aspectRatio: '3/4',
-        maxHeight: '46vh',
+        maxHeight: 'min(370px, 45vh)',
         boxShadow: baseShadow,
       };
     }
     if (viewfinderSize === 'compact') {
       return {
-        width: 'min(70%, calc(35vh * 0.75))',
+        width: 'min(75%, calc(min(280px, 35vh) * 0.75))',
         aspectRatio: '3/4',
-        maxHeight: '35vh',
+        maxHeight: 'min(280px, 35vh)',
         boxShadow: baseShadow,
       };
     }
     // circle
     return {
-      width: 'min(55%, calc(25vh))',
+      width: 'min(60%, min(210px, 25vh))',
       aspectRatio: '1/1',
-      maxHeight: '25vh',
+      maxHeight: 'min(210px, 25vh)',
       boxShadow: baseShadow,
     };
   };
@@ -2405,7 +2406,7 @@ export default function App() {
       )}
 
       {/* Main App Container */}
-      <div className="flex-1 w-full max-w-md mx-auto flex flex-col justify-between pt-12 pb-6 px-4 relative z-10">
+      <div className="w-full max-w-[390px] h-[844px] max-h-screen my-auto mx-auto flex flex-col justify-between pt-12 pb-6 px-4 relative z-10 transition-all duration-300">
         
         {/* Settings modal (Bottom Drawer Sheet styled) */}
         {currentView === 'settings' && (
@@ -2428,10 +2429,10 @@ export default function App() {
 
         {/* Top Control Bar */}
         <div 
-          className={`w-full flex items-center justify-between mb-2 select-none transition-all duration-300 transform ${
+          className={`transition-all duration-305 transform ${
             immersiveMode 
-              ? 'opacity-0 pointer-events-none -translate-y-2' 
-              : 'opacity-100 pointer-events-auto translate-y-0'
+              ? 'hidden pointer-events-none' 
+              : 'w-full flex items-center justify-between mb-2 select-none opacity-100 pointer-events-auto translate-y-0'
           }`}
         >
           <div className="flex items-center gap-1.5">
@@ -2469,7 +2470,7 @@ export default function App() {
         </div>
 
         {/* Cinematic Viewfinder (Mirrors physical screen) */}
-        <div className="flex-1 w-full flex flex-col items-center justify-center overflow-hidden py-1 min-h-[35vh]">
+        <div className="w-full flex-1 flex flex-col items-center justify-center overflow-hidden py-1 min-h-[35vh] transition-all duration-300">
           <div 
             className={`overflow-hidden relative transition-all duration-500 ease-out border-4 border-white/85 bg-stone-950
               ${viewfinderSize === 'standard' ? 'rounded-[36px]' : ''}
@@ -2506,10 +2507,10 @@ export default function App() {
             Ⅱ. UNIFIED LUMI AI CONTROL CONSOLE DRAWER (MASTER DECK)
             ========================================================= */}
         <div 
-          className={`w-full flex flex-col gap-2 z-20 transition-all duration-300 ease-out transform select-none ${
+          className={`z-20 transition-all duration-300 ease-out transform select-none ${
             immersiveMode 
-              ? 'opacity-0 pointer-events-none translate-y-4 scale-98' 
-              : 'opacity-100 pointer-events-auto translate-y-0 scale-100'
+              ? 'hidden pointer-events-none' 
+              : 'w-full flex flex-col gap-2 translate-y-0 scale-100 opacity-100 pointer-events-auto'
           }`}
         >
 
@@ -2614,98 +2615,98 @@ export default function App() {
                 </div>
 
                 {/* Collapsible Report Block */}
-                {!showDetailedAnalysis ? (
-                  /* 💡 COLLAPSED DETAIL TRIGGER */
-                  <div 
-                    onClick={() => {
-                      playSound('click');
-                      setShowDetailedAnalysis(true);
-                    }}
-                    className="w-full bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/10 hover:border-indigo-500/20 py-2.5 px-4 rounded-xl flex items-center justify-between cursor-pointer transition-all active:scale-99 group text-left mt-0.5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-                      <span className="text-xs font-semibold text-indigo-300 group-hover:text-white transition-colors">
-                        {isZh ? '💡 查看当前环境详细分析与定制建议' : '💡 View environmental details & custom advice'}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-indigo-400 font-bold group-hover:translate-x-0.5 transition-transform">
-                      {isZh ? '展开 ∨' : 'Expand ∨'}
-                    </span>
-                  </div>
-                ) : (
-                  /* 🔍 EXPANDED THREE MAIN CONSUMER SECTIONS IN MANDATED SEQUENCE */
-                  <div className="w-full flex flex-col gap-2.5 bg-black/15 border border-white/5 rounded-xl p-2.5 animate-fade-in text-sans">
-                    
+                {aiReport && (
+                  !showDetailedAnalysis ? (
+                    /* 💡 COLLAPSED DETAIL TRIGGER */
                     <div 
                       onClick={() => {
                         playSound('click');
-                        setShowDetailedAnalysis(false);
+                        setShowDetailedAnalysis(true);
                       }}
-                      className="w-full pb-1 border-b border-white/5 flex items-center justify-between cursor-pointer text-left"
+                      className="w-full bg-indigo-500/5 hover:bg-indigo-500/10 border border-indigo-500/10 hover:border-indigo-500/20 py-2.5 px-4 rounded-xl flex items-center justify-between cursor-pointer transition-all active:scale-99 group text-left mt-0.5"
                     >
-                      <span className="text-xs font-bold text-indigo-300">
-                        {isZh ? '✨ Lumi 智能自拍环境报告' : '✨ Lumi Smart Ambient Report'}
-                      </span>
-                      <span className="text-[12px] text-white/40 hover:text-white transition-colors">
-                        ︿
-                      </span>
-                    </div>
-
-                    {/* Section 1: 当前环境分析 */}
-                    <div className="w-full flex flex-col gap-1.5 bg-white/5 border border-white/10 rounded-xl p-3 text-left">
-                      <div className="text-[11px] font-semibold text-[#A6B5FF] flex items-center gap-1.5 pb-1 border-b border-white/5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>{isZh ? '当前自拍环境感知' : 'Ambient Perception'}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+                        <span className="text-xs font-semibold text-indigo-300 group-hover:text-white transition-colors">
+                          {isZh ? '💡 查看当前环境详细分析与定制建议' : '💡 View environmental details & custom advice'}
+                        </span>
                       </div>
-                      <p className="text-[11.5px] text-white/90 leading-relaxed font-normal">
-                        {getEnvironmentObservation(ambientStats, isZh)}
-                      </p>
+                      <span className="text-[10px] text-indigo-400 font-bold group-hover:translate-x-0.5 transition-transform">
+                        {isZh ? '展开 ∨' : 'Expand ∨'}
+                      </span>
                     </div>
-
-                    {/* Section 2: Lumi AI 建议 */}
-                    <div 
-                      onClick={() => {
-                        playSound('focus');
-                        setActivePreset(recommendedPreset);
-                        setIsLightSelected(true);
-                        setImmersiveMode(true);
-                        showToast(isZh 
-                          ? `✨ Lumi 氛围补光就绪：已匹配「${recommendedPreset.name}」自拍光线！`
-                          : `✨ Lumi Selected: Applied "${recommendedPreset.englishName}" glow!`
-                        );
-                      }}
-                      className="bg-black/20 hover:bg-black/30 rounded-xl p-3.5 border border-indigo-500/10 hover:border-indigo-400/20 flex flex-col gap-1.5 text-left cursor-pointer transition-all active:scale-99 group/advice"
-                    >
-                      <div className="flex gap-2 items-center text-[10.5px] font-semibold tracking-wider text-indigo-300">
-                        <span>💡</span>
-                        <span>{isZh ? 'Lumi AI 定制建议' : 'Lumi AI Custom Advice'}</span>
-                        <span className="ml-auto text-[8.5px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 px-1.5 py-0.5 rounded-md opacity-80 group-hover/advice:opacity-100 transition-opacity font-bold">
-                          {isZh ? '一键匹配并亮起 ↗' : 'Apply & Glow ↗'}
+                  ) : (
+                    /* 🔍 EXPANDED THREE MAIN CONSUMER SECTIONS IN MANDATED SEQUENCE */
+                    <div className="w-full flex flex-col gap-2.5 bg-black/15 border border-white/5 rounded-xl p-2.5 animate-fade-in text-sans">
+                      
+                      <div 
+                        onClick={() => {
+                          playSound('click');
+                          setShowDetailedAnalysis(false);
+                        }}
+                        className="w-full pb-1 border-b border-white/5 flex items-center justify-between cursor-pointer text-left"
+                      >
+                        <span className="text-xs font-bold text-indigo-300">
+                          {isZh ? '✨ Lumi 智能自拍环境报告' : '✨ Lumi Smart Ambient Report'}
+                        </span>
+                        <span className="text-[12px] text-white/40 hover:text-white transition-colors">
+                          ︿
                         </span>
                       </div>
 
-                      <div className="flex flex-col gap-1.5 mt-0.5">
-                        <p className="text-[12.5px] font-extrabold text-emerald-300">
-                          {isZh ? `专属推荐方案「${recommendedPreset.name}」` : `Recommended "${recommendedPreset.englishName}"`}
+                      {/* Section 1: 当前环境分析 */}
+                      <div className="w-full flex flex-col gap-1.5 bg-white/5 border border-white/10 rounded-xl p-3 text-left">
+                        <div className="text-[11px] font-semibold text-[#A6B5FF] flex items-center gap-1.5 pb-1 border-b border-white/5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>{isZh ? '当前自拍环境感知' : 'Ambient Perception'}</span>
+                        </div>
+                        <p className="text-[11.5px] text-white/90 leading-relaxed font-normal">
+                          {getEnvironmentObservation(ambientStats, isZh)}
                         </p>
-                        <p className="text-[12px] text-white/90 leading-relaxed font-medium">
-                          {isZh ? recommendedInfo.adviceZh : recommendedInfo.adviceEn}
-                        </p>
-                        <div className="flex flex-col gap-1 pl-1 mt-1 border-t border-white/5 pt-1.5">
-                          {getSelfieBullets?.(recommendedPreset.id, isZh)?.map((bullet: string, idx: number) => (
-                            <div key={idx} className="flex items-center gap-1.5 text-[11px] text-white/70 animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
-                              <span className="text-[8px] text-indigo-300 select-none">•</span>
-                              <span>{bullet}</span>
-                            </div>
-                          ))}
+                      </div>
+
+                      {/* Section 2: Lumi AI 建议 */}
+                      <div 
+                        onClick={() => {
+                          playSound('focus');
+                          setActivePreset(recommendedPreset);
+                          setIsLightSelected(true);
+                          setImmersiveMode(true);
+                          showToast(isZh 
+                            ? `✨ Lumi 氛围补光就绪：已匹配「${recommendedPreset.name}」自拍光线！`
+                            : `✨ Lumi Selected: Applied "${recommendedPreset.englishName}" glow!`
+                          );
+                        }}
+                        className="bg-black/20 hover:bg-black/30 rounded-xl p-3.5 border border-indigo-500/10 hover:border-indigo-400/20 flex flex-col gap-1.5 text-left cursor-pointer transition-all active:scale-99 group/advice"
+                      >
+                        <div className="flex gap-2 items-center text-[10.5px] font-semibold tracking-wider text-indigo-300">
+                          <span>💡</span>
+                          <span>{isZh ? 'Lumi AI 定制建议' : 'Lumi AI Custom Advice'}</span>
+                          <span className="ml-auto text-[8.5px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 px-1.5 py-0.5 rounded-md opacity-80 group-hover/advice:opacity-100 transition-opacity font-bold">
+                            {isZh ? '一键匹配并亮起 ↗' : 'Apply & Glow ↗'}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5 mt-0.5">
+                          <p className="text-[12.5px] font-extrabold text-emerald-300">
+                            {isZh ? `专属推荐方案「${recommendedPreset.name}」` : `Recommended "${recommendedPreset.englishName}"`}
+                          </p>
+                          <p className="text-[12px] text-white/90 leading-relaxed font-medium">
+                            {isZh ? recommendedInfo.adviceZh : recommendedInfo.adviceEn}
+                          </p>
+                          <div className="flex flex-col gap-1 pl-1 mt-1 border-t border-white/5 pt-1.5">
+                            {getSelfieBullets?.(recommendedPreset.id, isZh)?.map((bullet: string, idx: number) => (
+                              <div key={idx} className="flex items-center gap-1.5 text-[11px] text-white/70 animate-fade-in" style={{ animationDelay: `${idx * 100}ms` }}>
+                                <span className="text-[8px] text-indigo-300 select-none">•</span>
+                                <span>{bullet}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
+
                     </div>
-
-
-
-                  </div>
+                  )
                 )}
 
                 {/* Collapse Button at the bottom of the deck */}
@@ -2813,7 +2814,7 @@ export default function App() {
 
         </div>
 
-        <div className="text-center text-[10px] text-white/50 tracking-widest uppercase mt-0.5">
+        <div className={`text-center text-[10px] text-white/50 tracking-widest uppercase mt-0.5 transition-all duration-300 ${immersiveMode ? 'hidden' : ''}`}>
           designed by lumi in california
         </div>
 

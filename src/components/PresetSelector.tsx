@@ -84,7 +84,7 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
     <div className="w-full flex flex-col gap-1.5 px-2 py-2 select-none text-left">
       
       {/* ⚡ COMBINED DUAL CONTROLLER HEADER */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-1.5 border-b border-white/8 pb-1.5 mb-1.5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-1.5 pb-1.5 mb-1.5">
         
         {/* Right Part: Style Category Selector */}
         <div className="flex items-center gap-1.5">
@@ -98,7 +98,7 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
                 <button
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all duration-200 cursor-pointer ${
+                  className={`px-3 py-1 rounded-md text-[11px] font-bold transition-all duration-200 cursor-pointer outline-none focus:outline-none focus:ring-0 active:outline-none ${
                     isCatActive
                       ? 'bg-white text-zinc-950 shadow-md scale-[1.02]'
                       : 'text-zinc-200 bg-white/10 hover:text-white hover:bg-white/20'
@@ -135,7 +135,7 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
               key={preset.id}
               data-preset-id={preset.id}
               onClick={() => onSelect(preset)}
-              className="flex-shrink-0 w-13 flex flex-col items-center gap-1 snap-center transition-all duration-300 relative focus:outline-none"
+              className="flex-shrink-0 w-13 flex flex-col items-center gap-1 snap-center transition-all duration-300 relative outline-none focus:outline-none focus:ring-0 active:outline-none active:ring-0 hover:outline-none"
             >
               {/* Luxury Floating Swatch Orb */}
               <div
@@ -179,14 +179,7 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
         })}
       </div>
 
-      {/* Tiny Status Indicator line at the bottom */}
-      <div className="flex items-center justify-between px-1 pt-1.5 text-zinc-300/90 text-[10.5px] font-sans font-bold select-none tracking-wide border-t border-white/10">
-        <span>
-          {splitMode !== 'none'
-            ? `${isZh ? '分屏校准 · [双源微调]' : 'SPLIT MODE · CALIBRATED'}`
-            : (isZh ? '高级人像漫反射 · LUMI AI' : 'PORTRAIT DIFFUSION // LUMI AI')}
-        </span>
-      </div>
+
 
     </div>
   );

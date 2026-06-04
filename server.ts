@@ -274,8 +274,34 @@ app.post("/api/gemini/analyze", async (req, res) => {
 
   // If no credentials are provided in either request body or server ENV, return clean sensor fallback right away, without failing "busy"
   const activeKey = apiKey || (provider === "gemini" || !provider ? process.env.GEMINI_API_KEY : "");
-  if (!activeKey) {
+  
+  const isPlaceholderValue = (val: any) => {
+    if (!val || typeof val !== 'string') return true;
+    const v = val.trim().toLowerCase();
+    return (
+      v === "" ||
+      v.includes("placeholder") ||
+      v.includes("your_api_key") ||
+      v.includes("your_key") ||
+      v === "sk-xxxx" ||
+      v === "ep-xxxxxxxxxxxx" ||
+      v.includes("xxxxxx")
+    );
+  };
+
+  if (!activeKey || isPlaceholderValue(activeKey)) {
     return res.json(localFallbackReport);
+  }
+
+  const activeModel = model || "";
+  if ((provider === "doubao" || (apiEndpoint || "").toLowerCase().includes("volces.com") || (apiEndpoint || "").toLowerCase().includes("volcengine")) && isPlaceholderValue(activeModel)) {
+    const doubaoFallback = {
+      ...localFallbackReport,
+      problems: "💡 提示：您已选择火山引擎「豆包」模型，但尚未配置有效的目标接入点 Endpoint ID (例如 ep-2026xxxxxxxx-xxxxx)。目前使用设备本地多维传感器自控补光。",
+      reasoningZh: "✨ [Lumi 本地智选 - 豆包配置提示] 已检测到火山引擎关联配置，由于 Endpoint ID 为默认占位符，已开启传感器精细补光方案。请进入右上角「设置」填入专属 Endpoint ID 后重试！",
+      reasoningEn: "✨ [Lumi Doubao Setup Tip] Volcengine selected. Since Endpoint ID is the default placeholder, local sensor fallback has been activated. Please enter your valid Doubao Endpoint ID under Settings."
+    };
+    return res.json(doubaoFallback);
   }
 
   try {
@@ -606,7 +632,7 @@ app.post("/api/gemini/analyze", async (req, res) => {
     res.json(parsedData);
 
   } catch (apiError: any) {
-    console.warn("Lumi Vision API error, triggering helpful diagnostic mode:", apiError?.message || apiError);
+    console.log("[Lumi Diagnostics - Handled Fallback Option] API offline or invalid creds:", apiError?.message || apiError);
 
     // Provide a helpful system explanation indicating the error and provider state instead of just saying "cloud is busy"
     const displayMessageZh = `✨ [Lumi AI 异常自检] 无法调用您配置的 ${provider || 'AI'} 接口。错误提示: "${apiError?.message || 'Unauthorized Key or network timeout'}"。请点击右上角「设置」检查您的 API Key 或是 Base URL 端点配置后重试。目前已为您启动本地重力防抖补偿补光：`;

@@ -134,7 +134,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
-    const isVision = supportsVision(prov, cleanModel);
+    const isVision = true;
 
     let resultText = "";
 

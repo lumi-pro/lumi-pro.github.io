@@ -89,7 +89,13 @@ app.post("/api/ai/test-connection", async (req, res) => {
       if (!targetUrl.startsWith("http")) {
         targetUrl = "https://" + targetUrl;
       }
-      targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
+      if (!targetUrl.includes("/messages")) {
+        if (!targetUrl.includes("/v1")) {
+          targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
+        } else {
+          targetUrl = targetUrl.replace(/\/+$/, "") + "/messages";
+        }
+      }
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -421,7 +427,13 @@ app.post("/api/gemini/analyze", async (req, res) => {
       if (!targetUrl.startsWith("http")) {
         targetUrl = "https://" + targetUrl;
       }
-      targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
+      if (!targetUrl.includes("/messages")) {
+        if (!targetUrl.includes("/v1")) {
+          targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
+        } else {
+          targetUrl = targetUrl.replace(/\/+$/, "") + "/messages";
+        }
+      }
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -517,7 +529,7 @@ app.post("/api/gemini/analyze", async (req, res) => {
       };
 
       // Add json object support if supported
-      if (prov !== "openrouter" && prov !== "custom") {
+      if (prov !== "openrouter" && prov !== "custom" && prov !== "doubao") {
         bodyData.response_format = { type: "json_object" };
       }
 

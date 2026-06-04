@@ -1766,6 +1766,13 @@ export default function App() {
         const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
         const endpointStr = storedEndpoint.trim();
         const isGeminiUrl = endpointStr.includes("googleapis.com") || endpointStr.includes("google") || endpointStr.includes("gemini");
+        const isAnthropicUrl = storedProvider === "claude" || endpointStr.includes("anthropic.com");
+        
+        const hasVision = (() => {
+          if (storedProvider === "doubao" || storedProvider === "custom") return false;
+          const textOnlyModels = ["qwen", "deepseek-chat", "gpt-3", "llama"];
+          return !textOnlyModels.some(m => (storedModel || "").toLowerCase().includes(m));
+        })();
         
         let targetUrl = endpointStr;
         let headers: Record<string, string> = {
@@ -1814,18 +1821,14 @@ export default function App() {
             targetUrl += (targetUrl.includes("?") ? "&" : "?") + "key=" + storedKey;
           }
           
+          const parts: any[] = [];
+          if (hasVision) {
+            parts.push({ inlineData: { mimeType: "image/jpeg", data: base64Data } });
+          }
+          parts.push({ text: promptText });
+          
           bodyData = {
-            contents: {
-              parts: [
-                {
-                  inlineData: {
-                    mimeType: "image/jpeg",
-                    data: base64Data
-                  }
-                },
-                { text: promptText }
-              ]
-            },
+            contents: [{ parts }],
             generationConfig: {
               responseMimeType: "application/json",
               responseSchema: {
@@ -1847,6 +1850,32 @@ export default function App() {
               }
             }
           };
+        } else if (isAnthropicUrl) {
+          if (!targetUrl.includes("/messages")) {
+            targetUrl = targetUrl.replace(/\/+$/, "");
+            if (!targetUrl.includes("/v1")) {
+              targetUrl = targetUrl + "/v1/messages";
+            } else {
+              targetUrl = targetUrl + "/messages";
+            }
+          }
+          headers["x-api-key"] = storedKey;
+          headers["anthropic-version"] = "2023-06-01";
+          
+          const userContent: any[] = [];
+          if (hasVision) {
+            userContent.push({
+              type: "image",
+              source: { type: "base64", media_type: "image/jpeg", data: base64Data }
+            });
+          }
+          userContent.push({ type: "text", text: promptText + `\n\nCRITICAL: Return a raw valid JSON object. Ensure the JSON strictly contains these keys: ${schemaKeys.join(", ")}.` });
+          
+          bodyData = {
+            model: storedModel || "claude-3-5-sonnet",
+            max_tokens: 2048,
+            messages: [{ role: "user", content: userContent }]
+          };
         } else {
           if (!targetUrl.includes("/chat/completions")) {
             targetUrl = targetUrl.replace(/\/+$/, "") + "/chat/completions";
@@ -1857,26 +1886,22 @@ export default function App() {
           
           let modelName = storedModel || 'gpt-4o-mini';
           
+          const userContent: any[] = [
+            { type: "text", text: promptText + `\n\nCRITICAL: Return a raw valid JSON object. Ensure the JSON strictly contains these keys: ${schemaKeys.join(", ")}.` }
+          ];
+          if (hasVision) {
+            userContent.push({
+              type: "image_url",
+              image_url: { url: `data:image/jpeg;base64,${base64Data}` }
+            });
+          }
+          
+          const skipResponseFormat = storedProvider === "openrouter" || storedProvider === "custom" || storedProvider === "doubao";
+          
           bodyData = {
             model: modelName,
-            response_format: { type: "json_object" },
-            messages: [
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "text",
-                    text: promptText + `\n\nCRITICAL: Return a raw valid JSON object. Ensure the JSON strictly contains these keys: ${schemaKeys.join(", ")}.`
-                  },
-                  {
-                    type: "image_url",
-                    image_url: {
-                      url: `data:image/jpeg;base64,${base64Data}`
-                    }
-                  }
-                ]
-              }
-            ]
+            ...(skipResponseFormat ? {} : { response_format: { type: "json_object" } }),
+            messages: [{ role: "user", content: userContent }]
           };
         }
 
@@ -1896,6 +1921,8 @@ export default function App() {
         
         if (isGeminiUrl) {
           resultText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+        } else if (isAnthropicUrl) {
+          resultText = data?.content?.[0]?.text || "{}";
         } else {
           resultText = data?.choices?.[0]?.message?.content || "{}";
         }

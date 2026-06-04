@@ -183,7 +183,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } else if (prov === "claude") {
       let targetUrl = cleanBaseUrl || "https://api.anthropic.com";
       if (!targetUrl.startsWith("http")) targetUrl = "https://" + targetUrl;
-      targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
+      if (!targetUrl.includes("/messages")) {
+        if (!targetUrl.includes("/v1")) {
+          targetUrl = targetUrl.replace(/\/+$/, "") + "/v1/messages";
+        } else {
+          targetUrl = targetUrl.replace(/\/+$/, "") + "/messages";
+        }
+      }
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -253,7 +259,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         messages: [{ role: "user", content: contentArray }]
       };
 
-      if (prov !== "openrouter" && prov !== "custom") {
+      if (prov !== "openrouter" && prov !== "custom" && prov !== "doubao") {
         bodyData.response_format = { type: "json_object" };
       }
 
